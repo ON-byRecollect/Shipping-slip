@@ -23,7 +23,6 @@
     input { width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 18px; outline: none; }
     button { width: 100%; padding: 14px; background: #000; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; }
     
-    /* 複数対応用スタイル */
     .result-container { display: none; margin-top: 10px; }
     .item-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; border-left: 6px solid #000; }
     .item-label { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 2px; }
@@ -48,7 +47,6 @@
       <div id="loading" class="loading">検索中...</div>
       <div id="error"></div>
     </div>
-    
     <div id="result" class="result-container"></div>
   </div>
 
@@ -64,7 +62,7 @@
       
       if (!id) return;
       errDiv.innerText = "";
-      resDiv.innerHTML = ""; // 以前の表示を消す
+      resDiv.innerHTML = ""; 
       resDiv.style.display = 'none';
       kanriDiv.style.display = 'none';
       loadDiv.style.display = 'block';
@@ -78,31 +76,19 @@
         if (result.error) {
           errDiv.innerText = result.error;
         } else if (result.data) {
-          // 左上の黒い正方形には1件目の管理NOを表示
-          document.getElementById('resKanri').innerText = result.data[0].kanri || '--';
+          // --- ここで表示を切り替え ---
+          const kanriDisplay = document.getElementById('resKanri');
+          if (result.data.length > 1) {
+            kanriDisplay.innerText = "複";
+            kanriDisplay.style.fontSize = "54px";
+          } else {
+            kanriDisplay.innerText = result.data[0].kanri || '--';
+            kanriDisplay.style.fontSize = "64px";
+          }
           kanriDiv.style.display = 'flex';
 
-          // 見つかったデータの数だけカードを作成
           result.data.forEach(item => {
             const card = document.createElement('div');
             card.className = 'item-card';
             card.innerHTML = `
-              <div><div class="item-label">管理NO</div><div class="item-value" style="color: #666; font-size: 16px;"># ${item.kanri || '--'}</div></div>
-              <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
-              <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
-              <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
-              <div><div class="item-label">シリアル</div><div class="item-value">${item.serial || '--'}</div></div>
-            `;
-            resDiv.appendChild(card);
-          });
-          
-          resDiv.style.display = 'block';
-        }
-      } catch (e) {
-        loadDiv.style.display = 'none';
-        errDiv.innerText = "通信エラーが発生しました";
-      }
-    }
-  </script>
-</body>
-</html>
+              <div><div class="item-
