@@ -15,14 +15,8 @@
     input, button { font-family: 'Line Seed JP', sans-serif !important; }
     .container { max-width: 500px; margin: auto; }
     .search-box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    h2 { text-align: center; margin-top: 0; color: #000; font-size: 1.5rem; margin-bottom: 15px; font-weight: 700; letter-spacing: 2px; }
+    h2 { text-align: center; margin-top: 0; color: #000; font-size: 1.5rem; margin-bottom: 25px; font-weight: 700; letter-spacing: 2px; }
     
-    /* モード切り替え */
-    .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-    .mode-switch label { font-size: 11px; font-weight: 700; color: #888; cursor: pointer; padding: 6px 10px; border: 2px solid #ddd; border-radius: 20px; }
-    .mode-switch input { display: none; }
-    .mode-switch input:checked + label { background: #000; color: #fff; border-color: #000; }
-
     /* 5連入力窓のスタイル */
     .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
     .input-row { position: relative; }
@@ -41,6 +35,7 @@
     .id-badge { display: inline-flex; justify-content: center; align-items: center; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 8px; font-size: 18px; font-weight: 700; margin-bottom: 12px; }
     .item-label { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 2px; }
     .item-value { font-size: 18px; font-weight: 700; color: #222; margin-bottom: 10px; }
+    .item-value:last-child { margin-bottom: 0; }
     
     .loading { text-align: center; color: #000; display: none; margin-top: 15px; font-weight: 700; }
     .error-msg { color: #d93025; font-size: 12px; margin-top: 5px; font-weight: 700; }
@@ -49,14 +44,7 @@
 <body>
   <div class="container">
     <div class="search-box">
-      <h2>発送伝票一括照合</h2>
-
-      <div class="mode-switch">
-        <input type="radio" id="modeSingle" name="searchMode" value="single" checked>
-        <label for="modeSingle">最初の一件のみ</label>
-        <input type="radio" id="modeMulti" name="searchMode" value="multi">
-        <label for="modeMulti">重複分もすべて表示</label>
-      </div>
+      <h2>発送伝票</h2>
 
       <div class="input-group">
         <div class="input-row"><span>1</span><input type="text" class="id-input" placeholder="IDを入力"></div>
@@ -67,7 +55,7 @@
       </div>
 
       <div class="button-group">
-        <button class="btn-search" onclick="searchAll()">一括データ照合</button>
+        <button class="btn-search" onclick="searchAll()">データ照合</button>
         <button class="btn-reset" onclick="resetForm()">リセット</button>
       </div>
 
@@ -93,7 +81,6 @@
       const resDiv = document.getElementById('result');
       const errBox = document.getElementById('error-box');
       const loadDiv = document.getElementById('loading');
-      const isMultiMode = document.getElementById('modeMulti').checked;
 
       const idList = Array.from(inputs).map(i => i.value.trim()).filter(id => id !== "");
       if (idList.length === 0) return;
@@ -104,7 +91,6 @@
       loadDiv.style.display = 'block';
 
       try {
-        // 並列でリクエストを投げて速度アップ
         const requests = idList.map(id => fetch(`${GAS_URL}?id=${encodeURIComponent(id)}`).then(r => r.json()));
         const responses = await Promise.all(requests);
 
@@ -114,9 +100,8 @@
           if (result.error) {
             errBox.innerHTML += `<div class="error-msg">ID ${targetId}: ${result.error}</div>`;
           } else if (result.data) {
-            const displayData = isMultiMode ? result.data : [result.data[0]];
-            
-            displayData.forEach(item => {
+            // デフォルトで重複分もすべて表示する設定
+            result.data.forEach(item => {
               const card = document.createElement('div');
               card.className = 'item-card';
               card.innerHTML = `
