@@ -11,34 +11,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Line+Seed+JP:wght@700&display=swap" rel="stylesheet">
   
   <style>
-    body { font-family: 'Line Seed JP', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+    body { font-family: 'Line Seed JP', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; color: #333; }
     input, button { font-family: 'Line Seed JP', sans-serif !important; }
     .container { max-width: 500px; margin: auto; }
-    .search-box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    
+    /* 入力エリア */
+    .search-box { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 25px; }
     h2 { text-align: center; margin-top: 0; color: #000; font-size: 1.5rem; margin-bottom: 25px; font-weight: 700; letter-spacing: 2px; }
     
-    /* 5連入力窓のスタイル */
     .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
     .input-row { position: relative; }
     .input-row span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #bbb; font-weight: 700; }
-    .id-input { width: 100%; padding: 12px 12px 12px 35px; border: 2px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.2s; }
-    .id-input:focus { border-color: #000; background: #fdfdfd; }
+    .id-input { width: 100%; padding: 12px 12px 12px 35px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.2s; }
+    .id-input:focus { border-color: #000; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
 
-    /* ボタン配置 */
     .button-group { display: flex; gap: 10px; }
-    .btn-search { flex: 2; padding: 16px; background: #000; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; }
-    .btn-reset { flex: 1; padding: 16px; background: #fff; color: #d93025; border: 2px solid #d93025; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; }
+    .btn-search { flex: 2; padding: 16px; background: #000; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 700; transition: opacity 0.2s; }
+    .btn-search:active { opacity: 0.8; }
+    .btn-reset { flex: 1; padding: 16px; background: #fff; color: #d93025; border: 2px solid #d93025; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; }
     
-    /* 結果表示のデザイン */
+    /* 結果カードのデザイン（影を強調） */
     .result-container { display: none; margin-top: 10px; }
-    .item-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #eee; border-left: 8px solid #000; }
-    .id-badge { display: inline-flex; justify-content: center; align-items: center; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 8px; font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-    .item-label { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 2px; }
-    .item-value { font-size: 18px; font-weight: 700; color: #222; margin-bottom: 10px; }
+    .item-card { 
+      background: white; 
+      padding: 20px; 
+      margin-bottom: 20px; 
+      border-radius: 18px; 
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08); /* 影を深めにして浮き出し感を強調 */
+      border: 1px solid rgba(0,0,0,0.02);
+    }
+
+    /* 商品IDバッジ */
+    .id-section { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee; }
+    .id-badge { display: flex; justify-content: center; align-items: center; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 10px; font-size: 18px; font-weight: 700; }
+    .input-id-label { font-size: 12px; color: #888; font-weight: 700; }
+    .input-id-value { font-size: 18px; color: #000; font-weight: 700; }
+
+    .item-label { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 2px; text-transform: uppercase; }
+    .item-value { font-size: 19px; font-weight: 700; color: #222; margin-bottom: 12px; }
     .item-value:last-child { margin-bottom: 0; }
     
     .loading { text-align: center; color: #000; display: none; margin-top: 15px; font-weight: 700; }
-    .error-msg { color: #d93025; font-size: 12px; margin-top: 5px; font-weight: 700; }
+    .error-msg { background: #fff1f0; color: #d93025; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 5px; font-weight: 700; border: 1px solid #ffa39e; }
   </style>
 </head>
 <body>
@@ -95,17 +109,22 @@
         const responses = await Promise.all(requests);
 
         responses.forEach((result, index) => {
-          const targetId = idList[index];
+          const searchedId = idList[index]; // 入力した方のID
 
           if (result.error) {
-            errBox.innerHTML += `<div class="error-msg">ID ${targetId}: ${result.error}</div>`;
+            errBox.innerHTML += `<div class="error-msg">入力ID ${searchedId}: ${result.error}</div>`;
           } else if (result.data) {
-            // デフォルトで重複分もすべて表示する設定
             result.data.forEach(item => {
               const card = document.createElement('div');
               card.className = 'item-card';
               card.innerHTML = `
-                <div class="id-badge">${item.kanri || '--'}</div>
+                <div class="id-section">
+                  <div class="id-badge">${item.kanri || '--'}</div>
+                  <div>
+                    <div class="input-id-label">入力ID</div>
+                    <div class="input-id-value">${searchedId}</div>
+                  </div>
+                </div>
                 <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
                 <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
                 <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
