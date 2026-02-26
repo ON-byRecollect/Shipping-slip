@@ -15,41 +15,33 @@
     input, button { font-family: 'Line Seed JP', sans-serif !important; }
     .container { max-width: 500px; margin: auto; }
     
-    /* 入力エリア */
     .search-box { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 25px; }
     h2 { text-align: center; margin-top: 0; color: #000; font-size: 1.5rem; margin-bottom: 25px; font-weight: 700; letter-spacing: 2px; }
     
     .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
     .input-row { position: relative; }
     .input-row span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #bbb; font-weight: 700; }
+    
     .id-input { width: 100%; padding: 12px 12px 12px 35px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.2s; }
     .id-input:focus { border-color: #000; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
 
+    /* ★重複時のスタイル */
+    .id-input.error-field { border-color: #d93025 !important; background: #fff1f0; }
+    .dup-msg { color: #d93025; font-size: 10px; font-weight: 700; margin-left: 35px; margin-top: 2px; display: none; }
+
     .button-group { display: flex; gap: 10px; }
     .btn-search { flex: 2; padding: 16px; background: #000; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 700; transition: opacity 0.2s; }
-    .btn-search:active { opacity: 0.8; }
+    .btn-search:disabled { background: #ccc; cursor: not-allowed; }
     .btn-reset { flex: 1; padding: 16px; background: #fff; color: #d93025; border: 2px solid #d93025; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; }
     
-    /* 結果カードのデザイン（影を強調） */
     .result-container { display: none; margin-top: 10px; }
-    .item-card { 
-      background: white; 
-      padding: 20px; 
-      margin-bottom: 20px; 
-      border-radius: 18px; 
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08); /* 影を深めにして浮き出し感を強調 */
-      border: 1px solid rgba(0,0,0,0.02);
-    }
-
-    /* 商品IDバッジ */
+    .item-card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 18px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.02); }
     .id-section { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee; }
     .id-badge { display: flex; justify-content: center; align-items: center; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 10px; font-size: 18px; font-weight: 700; }
     .input-id-label { font-size: 12px; color: #888; font-weight: 700; }
     .input-id-value { font-size: 18px; color: #000; font-weight: 700; }
-
-    .item-label { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 2px; text-transform: uppercase; }
+    .item-label { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 2px; }
     .item-value { font-size: 19px; font-weight: 700; color: #222; margin-bottom: 12px; }
-    .item-value:last-child { margin-bottom: 0; }
     
     .loading { text-align: center; color: #000; display: none; margin-top: 15px; font-weight: 700; }
     .error-msg { background: #fff1f0; color: #d93025; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 5px; font-weight: 700; border: 1px solid #ffa39e; }
@@ -61,15 +53,15 @@
       <h2>発送伝票</h2>
 
       <div class="input-group">
-        <div class="input-row"><span>1</span><input type="text" class="id-input" placeholder="IDを入力"></div>
-        <div class="input-row"><span>2</span><input type="text" class="id-input" placeholder="IDを入力"></div>
-        <div class="input-row"><span>3</span><input type="text" class="id-input" placeholder="IDを入力"></div>
-        <div class="input-row"><span>4</span><input type="text" class="id-input" placeholder="IDを入力"></div>
-        <div class="input-row"><span>5</span><input type="text" class="id-input" placeholder="IDを入力"></div>
+        <div class="input-row"><span>1</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>2</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>3</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>4</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>5</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
       </div>
 
       <div class="button-group">
-        <button class="btn-search" onclick="searchAll()">データ照合</button>
+        <button id="searchBtn" class="btn-search" onclick="searchAll()">データ照合</button>
         <button class="btn-reset" onclick="resetForm()">リセット</button>
       </div>
 
@@ -82,9 +74,41 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbz6WHNfNJl7smm0R8JOL6TddnSYVUDlJ8VUYaYJbnOZRNKdKLI0noSdoB1J9iE66udrKg/exec";
 
+    // ★重複チェック機能
+    function checkDuplicates() {
+      const inputs = document.querySelectorAll('.id-input');
+      const msgs = document.querySelectorAll('.dup-msg');
+      const searchBtn = document.getElementById('searchBtn');
+      const values = Array.from(inputs).map(i => i.value.trim());
+      let hasError = false;
+
+      inputs.forEach((input, i) => {
+        const val = values[i];
+        // 空白でなく、かつ他の場所でも同じ値が使われているか
+        const isDup = val !== "" && values.filter((v, idx) => v === val && idx !== i).length > 0;
+        
+        if (isDup) {
+          input.classList.add('error-field');
+          msgs[i].style.display = 'block';
+          hasError = true;
+        } else {
+          input.classList.remove('error-field');
+          msgs[i].style.display = 'none';
+        }
+      });
+
+      // エラーがある場合はボタンを無効化
+      searchBtn.disabled = hasError;
+    }
+
     function resetForm() {
       const inputs = document.querySelectorAll('.id-input');
-      inputs.forEach(input => input.value = "");
+      inputs.forEach(input => {
+        input.value = "";
+        input.classList.remove('error-field');
+      });
+      document.querySelectorAll('.dup-msg').forEach(m => m.style.display = 'none');
+      document.getElementById('searchBtn').disabled = false;
       document.getElementById('result').innerHTML = "";
       document.getElementById('result').style.display = 'none';
       document.getElementById('error-box').innerHTML = "";
@@ -109,7 +133,7 @@
         const responses = await Promise.all(requests);
 
         responses.forEach((result, index) => {
-          const searchedId = idList[index]; // 入力した方のID
+          const searchedId = idList[index];
 
           if (result.error) {
             errBox.innerHTML += `<div class="error-msg">入力ID ${searchedId}: ${result.error}</div>`;
