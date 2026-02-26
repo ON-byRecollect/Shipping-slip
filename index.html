@@ -19,6 +19,24 @@
     .search-wrapper { display: flex; align-items: center; gap: 15px; min-height: 130px; }
     #cardKanri { display: none; flex-direction: column; justify-content: center; align-items: center; background: #000; width: 130px; height: 130px; border-radius: 15px; flex-shrink: 0; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
     #cardKanri .value { font-size: 64px; font-weight: 700; color: #fff; line-height: 1; text-align: center; }
+    
+    /* ミニアイコン用スタイル */
+    .mini-card {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+
     .search-inner { flex: 1; display: flex; flex-direction: column; gap: 10px; }
     input { width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 18px; outline: none; }
     input:focus { border-color: #000; }
@@ -65,7 +83,6 @@
       
       if (!id) return;
 
-      // 状態をリセット
       errDiv.innerText = "";
       resDiv.innerHTML = ""; 
       resDiv.style.display = 'none';
@@ -81,7 +98,6 @@
         if (result.error) {
           errDiv.innerText = result.error;
         } else if (result.data) {
-          // 複数ある場合の「複」表示ロジック
           if (result.data.length > 1) {
             kanriDisplay.innerText = "複";
             kanriDisplay.style.fontSize = "54px";
@@ -91,12 +107,14 @@
           }
           kanriDiv.style.display = 'flex';
 
-          // カードの生成
           result.data.forEach(item => {
             const card = document.createElement('div');
             card.className = 'item-card';
             card.innerHTML = `
-              <div><div class="item-label">管理NO</div><div class="item-value" style="color: #666; font-size: 16px;"># ${item.kanri || '--'}</div></div>
+              <div>
+                <div class="item-label">管理NO</div>
+                <div class="mini-card">${item.kanri || '--'}</div>
+              </div>
               <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
               <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
               <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
@@ -110,7 +128,6 @@
       } catch (e) {
         loadDiv.style.display = 'none';
         errDiv.innerText = "通信エラーが発生しました";
-        console.error(e);
       }
     }
   </script>
