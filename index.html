@@ -23,11 +23,12 @@
     input { width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 18px; outline: none; }
     button { width: 100%; padding: 14px; background: #000; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; }
     
-    /* 複数表示用：カードの間隔と左側の黒線デザイン */
+    /* 複数対応用スタイル */
     .result-container { display: none; margin-top: 10px; }
     .item-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; border-left: 6px solid #000; }
-    .item-label { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
-    .item-value { font-size: 20px; font-weight: 700; color: #222; margin-bottom: 8px; }
+    .item-label { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 2px; }
+    .item-value { font-size: 20px; font-weight: 700; color: #222; margin-bottom: 12px; }
+    .item-value:last-child { margin-bottom: 0; }
     
     .loading { text-align: center; color: #000; display: none; margin-top: 15px; font-weight: 700; }
     #error { color: #d93025; text-align: center; font-weight: 700; margin-top: 15px; }
@@ -63,7 +64,7 @@
       
       if (!id) return;
       errDiv.innerText = "";
-      resDiv.innerHTML = ""; // 前回の検索結果をクリア
+      resDiv.innerHTML = ""; // 以前の表示を消す
       resDiv.style.display = 'none';
       kanriDiv.style.display = 'none';
       loadDiv.style.display = 'block';
@@ -77,15 +78,16 @@
         if (result.error) {
           errDiv.innerText = result.error;
         } else if (result.data) {
-          // 代表的な管理番号を表示
+          // 左上の黒い正方形には1件目の管理NOを表示
           document.getElementById('resKanri').innerText = result.data[0].kanri || '--';
           kanriDiv.style.display = 'flex';
 
-          // データ（商品の数）だけループしてカードを作成
+          // 見つかったデータの数だけカードを作成
           result.data.forEach(item => {
             const card = document.createElement('div');
             card.className = 'item-card';
             card.innerHTML = `
+              <div><div class="item-label">管理NO</div><div class="item-value" style="color: #666; font-size: 16px;"># ${item.kanri || '--'}</div></div>
               <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
               <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
               <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
