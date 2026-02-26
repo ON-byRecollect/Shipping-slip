@@ -11,52 +11,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Line+Seed+JP:wght@700&display=swap" rel="stylesheet">
   
   <style>
-    /* 2. 全体への適用 */
-    body { 
-      font-family: 'Line Seed JP', sans-serif; 
-      background: #f0f2f5; 
-      margin: 0; 
-      padding: 20px; 
-      color: #333; 
-    }
-
-    /* 3. 入力欄とボタンにも強制適用（重要） */
-    input, button {
-      font-family: 'Line Seed JP', sans-serif !important;
-    }
-
+    body { font-family: 'Line Seed JP', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+    input, button { font-family: 'Line Seed JP', sans-serif !important; }
     .container { max-width: 500px; margin: auto; }
     .search-box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
     h2 { text-align: center; margin-top: 0; color: #000; font-size: 1.5rem; margin-bottom: 25px; font-weight: 700; letter-spacing: 2px; }
-    
     .search-wrapper { display: flex; align-items: center; gap: 15px; min-height: 130px; }
-
-    #cardKanri { 
-      display: none; 
-      flex-direction: column; justify-content: center; align-items: center; 
-      background: #000; 
-      width: 130px; height: 130px; 
-      border-radius: 15px; 
-      flex-shrink: 0;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
-    #cardKanri .value { 
-      font-size: 64px; 
-      font-weight: 700; 
-      color: #fff; 
-      line-height: 1; 
-      text-align: center;
-    }
-
+    #cardKanri { display: none; flex-direction: column; justify-content: center; align-items: center; background: #000; width: 130px; height: 130px; border-radius: 15px; flex-shrink: 0; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+    #cardKanri .value { font-size: 64px; font-weight: 700; color: #fff; line-height: 1; text-align: center; }
     .search-inner { flex: 1; display: flex; flex-direction: column; gap: 10px; }
     input { width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 18px; outline: none; }
-    input:focus { border-color: #000; }
     button { width: 100%; padding: 14px; background: #000; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 700; }
-
+    
+    /* 複数表示用：カードの間隔と左側の黒線デザイン */
     .result-container { display: none; margin-top: 10px; }
-    .item-card { background: white; padding: 18px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
+    .item-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; border-left: 6px solid #000; }
     .item-label { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
-    .item-value { font-size: 20px; font-weight: 700; color: #222; }
+    .item-value { font-size: 20px; font-weight: 700; color: #222; margin-bottom: 8px; }
     
     .loading { text-align: center; color: #000; display: none; margin-top: 15px; font-weight: 700; }
     #error { color: #d93025; text-align: center; font-weight: 700; margin-top: 15px; }
@@ -77,12 +48,7 @@
       <div id="error"></div>
     </div>
     
-    <div id="result" class="result-container">
-      <div class="item-card"><div class="item-label">商品名</div><div id="resName" class="item-value"></div></div>
-      <div class="item-card"><div class="item-label">サイズ</div><div id="resSize" class="item-value"></div></div>
-      <div class="item-card"><div class="item-label">カラー</div><div id="resColor" class="item-value"></div></div>
-      <div class="item-card"><div class="item-label">シリアル</div><div id="resSerial" class="item-value"></div></div>
-    </div>
+    <div id="result" class="result-container"></div>
   </div>
 
   <script>
@@ -97,25 +63,37 @@
       
       if (!id) return;
       errDiv.innerText = "";
+      resDiv.innerHTML = ""; // 前回の検索結果をクリア
       resDiv.style.display = 'none';
       kanriDiv.style.display = 'none';
       loadDiv.style.display = 'block';
 
       try {
         const response = await fetch(`${GAS_URL}?id=${encodeURIComponent(id)}`);
-        const data = await response.json();
+        const result = await response.json();
 
         loadDiv.style.display = 'none';
-        if (data.error) {
-          errDiv.innerText = data.error;
-        } else {
-          document.getElementById('resKanri').innerText = data.kanri || '--';
-          document.getElementById('resName').innerText = data.name || '--';
-          document.getElementById('resSize').innerText = data.size || '--';
-          document.getElementById('resColor').innerText = data.color || '--';
-          document.getElementById('resSerial').innerText = data.serial || '--';
-          
+
+        if (result.error) {
+          errDiv.innerText = result.error;
+        } else if (result.data) {
+          // 代表的な管理番号を表示
+          document.getElementById('resKanri').innerText = result.data[0].kanri || '--';
           kanriDiv.style.display = 'flex';
+
+          // データ（商品の数）だけループしてカードを作成
+          result.data.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.innerHTML = `
+              <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
+              <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
+              <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
+              <div><div class="item-label">シリアル</div><div class="item-value">${item.serial || '--'}</div></div>
+            `;
+            resDiv.appendChild(card);
+          });
+          
           resDiv.style.display = 'block';
         }
       } catch (e) {
