@@ -20,7 +20,7 @@
     #cardKanri { display: none; flex-direction: column; justify-content: center; align-items: center; background: #000; width: 130px; height: 130px; border-radius: 15px; flex-shrink: 0; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
     #cardKanri .value { font-size: 64px; font-weight: 700; color: #fff; line-height: 1; text-align: center; }
     
-    /* ミニアイコン用スタイル */
+    /* ミニアイコンのスタイル */
     .mini-card {
       display: inline-flex;
       justify-content: center;
@@ -32,8 +32,7 @@
       border-radius: 8px;
       font-size: 22px;
       font-weight: 700;
-      margin-top: 4px;
-      margin-bottom: 12px;
+      margin-bottom: 15px;
       box-shadow: 0 3px 6px rgba(0,0,0,0.15);
     }
 
@@ -98,7 +97,9 @@
         if (result.error) {
           errDiv.innerText = result.error;
         } else if (result.data) {
-          if (result.data.length > 1) {
+          const isMultiple = result.data.length > 1;
+
+          if (isMultiple) {
             kanriDisplay.innerText = "複";
             kanriDisplay.style.fontSize = "54px";
           } else {
@@ -110,11 +111,12 @@
           result.data.forEach(item => {
             const card = document.createElement('div');
             card.className = 'item-card';
+            
+            // 複数ある時だけミニアイコンを表示
+            const miniIconHtml = isMultiple ? `<div class="mini-card">${item.kanri || '--'}</div>` : '';
+
             card.innerHTML = `
-              <div>
-                <div class="item-label">管理NO</div>
-                <div class="mini-card">${item.kanri || '--'}</div>
-              </div>
+              ${miniIconHtml}
               <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
               <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
               <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
