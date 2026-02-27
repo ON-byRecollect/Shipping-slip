@@ -25,7 +25,6 @@
     .id-input { width: 100%; padding: 12px 12px 12px 35px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.2s; }
     .id-input:focus { border-color: #000; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
 
-    /* ★重複時のスタイル */
     .id-input.error-field { border-color: #d93025 !important; background: #fff1f0; }
     .dup-msg { color: #d93025; font-size: 10px; font-weight: 700; margin-left: 35px; margin-top: 2px; display: none; }
 
@@ -53,11 +52,11 @@
       <h2>発送伝票</h2>
 
       <div class="input-group">
-        <div class="input-row"><span>1</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>2</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>3</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>4</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>5</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>1</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 0)"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>2</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 1)"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>3</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 2)"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>4</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 3)"> <div class="dup-msg">重複しています</div></div>
+        <div class="input-row"><span>5</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 4)"> <div class="dup-msg">重複しています</div></div>
       </div>
 
       <div class="button-group">
@@ -74,7 +73,19 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbz6WHNfNJl7smm0R8JOL6TddnSYVUDlJ8VUYaYJbnOZRNKdKLI0noSdoB1J9iE66udrKg/exec";
 
-    // ★重複チェック機能
+    // ★時短：エンターキーで次の欄に移動する機能
+    function handleEnter(event, index) {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // 改行を防ぐ
+        const inputs = document.querySelectorAll('.id-input');
+        if (index < 4) {
+          inputs[index + 1].focus(); // 次の窓へ
+        } else {
+          searchAll(); // 5番目なら実行
+        }
+      }
+    }
+
     function checkDuplicates() {
       const inputs = document.querySelectorAll('.id-input');
       const msgs = document.querySelectorAll('.dup-msg');
@@ -84,7 +95,6 @@
 
       inputs.forEach((input, i) => {
         const val = values[i];
-        // 空白でなく、かつ他の場所でも同じ値が使われているか
         const isDup = val !== "" && values.filter((v, idx) => v === val && idx !== i).length > 0;
         
         if (isDup) {
@@ -96,8 +106,6 @@
           msgs[i].style.display = 'none';
         }
       });
-
-      // エラーがある場合はボタンを無効化
       searchBtn.disabled = hasError;
     }
 
@@ -112,6 +120,7 @@
       document.getElementById('result').innerHTML = "";
       document.getElementById('result').style.display = 'none';
       document.getElementById('error-box').innerHTML = "";
+      inputs[0].focus(); // 最初に戻る
     }
 
     async function searchAll() {
