@@ -6,11 +6,16 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#f4f7f9" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="小説ライティング">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <title>ライティング</title>
+  <title>小説ライティング</title>
 
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,472 +23,944 @@
 
   <style>
     :root {
-      --bg: #f4f7f9;
-      --panel: #ffffff;
-      --ink: #222;
-      --ink-strong: #000;
-      --muted: #8a8f95;
-      --line: #e8ebee;
-      --accent: #000;
-      --accent-ink: #fff;
-      --danger: #d93025;
-      --active: #eef1f4;
-      --shadow: 0 10px 25px rgba(0,0,0,0.05);
+      --bg: #f4f7f9; --panel: #ffffff; --ink: #222; --ink-strong: #000; --muted: #8a8f95;
+      --line: #e8ebee; --accent: #000; --accent-ink: #fff; --danger: #d93025; --ok: #1e9e5a;
+      --active: #eef1f4; --shadow: 0 10px 25px rgba(0,0,0,0.06);
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff;
-        --muted: #8b9096; --line: #2c2e31; --accent: #fff; --accent-ink: #000;
-        --danger: #ff6b5e; --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.35);
+        --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff; --muted: #8b9096;
+        --line: #2c2e31; --accent: #fff; --accent-ink: #000; --danger: #ff6b5e; --ok: #3ccf82;
+        --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.4);
       }
     }
     :root[data-theme="dark"] {
-      --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff;
-      --muted: #8b9096; --line: #2c2e31; --accent: #fff; --accent-ink: #000;
-      --danger: #ff6b5e; --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.35);
+      --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff; --muted: #8b9096;
+      --line: #2c2e31; --accent: #fff; --accent-ink: #000; --danger: #ff6b5e; --ok: #3ccf82;
+      --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.4);
     }
 
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
       margin: 0; background: var(--bg); color: var(--ink);
-      font-family: 'Line Seed JP', sans-serif; font-weight: 400;
-      -webkit-font-smoothing: antialiased;
+      font-family: 'Line Seed JP', sans-serif; -webkit-font-smoothing: antialiased;
     }
-    button, input, textarea, select { font-family: inherit; color: inherit; }
-    button { cursor: pointer; }
+    button, input, textarea { font-family: inherit; color: inherit; }
+    button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
+
+    /* ---------- ログイン ---------- */
+    .gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg); z-index: 100; }
+    .gate-box { width: 100%; max-width: 360px; background: var(--panel); padding: 32px 24px; border-radius: 20px; box-shadow: var(--shadow); text-align: center; }
+    .gate-box h1 { font-size: 1.3rem; margin: 0 0 6px; letter-spacing: 2px; color: var(--ink-strong); }
+    .gate-box p { font-size: 12px; color: var(--muted); margin: 0 0 22px; }
+    .gate-box input { width: 100%; padding: 14px; border: 2px solid var(--line); border-radius: 12px; font-size: 16px; background: var(--bg); outline: none; text-align: center; }
+    .gate-box input:focus { border-color: var(--accent); }
+    .gate-box button { width: 100%; margin-top: 12px; padding: 14px; border: none; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 15px; }
+    .gate-err { color: var(--danger); font-size: 12px; font-weight: 700; min-height: 18px; margin-top: 10px; }
 
     .app { display: flex; height: 100vh; height: 100dvh; }
 
-    /* ---------- サイドバー ---------- */
-    .sidebar {
-      width: 280px; flex-shrink: 0; background: var(--panel);
-      border-right: 1px solid var(--line); display: flex; flex-direction: column;
-      transition: transform 0.25s ease;
-    }
-    .sidebar-head { padding: 20px 16px 12px; display: flex; align-items: center; justify-content: space-between; }
-    .brand { font-weight: 700; font-size: 1.15rem; letter-spacing: 2px; color: var(--ink-strong); }
-    .btn-new {
-      background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px;
-      padding: 9px 14px; font-weight: 700; font-size: 13px;
-    }
-    .search { margin: 0 16px 10px; }
-    .search input {
-      width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px;
-      background: var(--bg); font-size: 14px; outline: none;
-    }
-    .search input:focus { border-color: var(--accent); }
-    .doc-list { list-style: none; margin: 0; padding: 4px 8px 16px; overflow-y: auto; flex: 1; }
-    .doc-item {
-      padding: 12px; border-radius: 12px; cursor: pointer; margin-bottom: 2px;
-      display: flex; flex-direction: column; gap: 3px;
-    }
-    .doc-item:hover { background: var(--active); }
-    .doc-item.active { background: var(--active); box-shadow: inset 3px 0 0 var(--accent); }
-    .doc-title { font-weight: 700; font-size: 14px; color: var(--ink-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .doc-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
-    .doc-snippet { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .empty-list { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; }
+    /* ---------- メニュー ---------- */
+    .sidebar { width: 300px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; transition: transform 0.25s ease; }
+    body.no-sidebar .sidebar { display: none; }
+    .side-head { padding: 18px 16px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .brand { font-weight: 700; font-size: 1.05rem; letter-spacing: 2px; color: var(--ink-strong); }
+    .btn-primary { background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px; padding: 9px 14px; font-weight: 700; font-size: 13px; white-space: nowrap; }
+    .tree { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
+    .work { margin-bottom: 6px; }
+    .work-row { display: flex; align-items: center; gap: 4px; padding: 8px 6px; border-radius: 12px; cursor: pointer; }
+    .work-row:hover, .ch-row:hover { background: var(--active); }
+    .work-row.active, .ch-row.active { background: var(--active); box-shadow: inset 3px 0 0 var(--accent); }
+    .twisty { border: none; background: none; width: 26px; height: 26px; border-radius: 8px; font-size: 11px; color: var(--muted); flex-shrink: 0; transition: transform 0.15s; }
+    .work.open .twisty { transform: rotate(90deg); }
+    .work-name { flex: 1; font-weight: 700; font-size: 14px; color: var(--ink-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini { font-size: 10px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .mini.done { color: var(--ok); font-weight: 700; }
+    .chapters { list-style: none; margin: 2px 0 0; padding: 0 0 0 22px; }
+    .work:not(.open) .chapters, .work:not(.open) .work-actions { display: none; }
+    .ch-row { display: flex; align-items: center; gap: 6px; padding: 9px 8px; border-radius: 10px; cursor: pointer; font-size: 13px; user-select: none; -webkit-user-select: none; }
+    .ch-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ch-no { color: var(--muted); font-size: 11px; width: 18px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .handle, .mv { display: none; border: none; background: none; color: var(--muted); padding: 2px 4px; font-size: 14px; }
+    .handle { cursor: grab; touch-action: none; font-size: 16px; }
+    .sorting .handle, .sorting .mv { display: inline-block; }
+    .sorting .ch-row { cursor: default; background: var(--bg); margin-bottom: 3px; }
+    .sorting .ch-row .mini { display: none; }
+    .ch-row.dragging { opacity: 0.9; box-shadow: var(--shadow); position: relative; z-index: 5; background: var(--panel); }
+    .work-actions { display: flex; gap: 6px; padding: 6px 0 4px 22px; }
+    .chip { border: 1px solid var(--line); background: transparent; border-radius: 99px; padding: 5px 11px; font-size: 11px; font-weight: 700; color: var(--ink); }
+    .chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .empty-tree { color: var(--muted); font-size: 13px; text-align: center; padding: 30px 10px; line-height: 1.8; }
+    .side-foot { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
 
     /* ---------- メイン ---------- */
     .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-    .toolbar {
-      display: flex; align-items: center; gap: 6px; padding: 10px 14px;
-      border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap;
-    }
-    .tool {
-      background: transparent; border: 1px solid var(--line); border-radius: 9px;
-      padding: 7px 10px; font-size: 12px; font-weight: 700; color: var(--ink);
-      white-space: nowrap;
-    }
+    .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); min-height: 52px; }
+    .crumb { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .crumb b { color: var(--ink-strong); }
+    .crumb a { color: inherit; text-decoration: none; cursor: pointer; }
+    .crumb a:hover { text-decoration: underline; }
+    .counts { display: flex; gap: 6px; flex-shrink: 0; }
+    .count { display: flex; flex-direction: column; align-items: flex-end; padding: 3px 10px; border-radius: 10px; background: var(--bg); line-height: 1.25; min-width: 82px; }
+    .count small { font-size: 9px; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+    .count span { font-size: 13px; font-weight: 700; color: var(--ink-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .count.done span { color: var(--ok); }
+    .count .bar { width: 100%; height: 3px; background: var(--line); border-radius: 9px; margin-top: 3px; overflow: hidden; }
+    .count .bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+    .count.done .bar i { background: var(--ok); }
+    .icon-btn { border: 1px solid var(--line); background: transparent; border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+    .toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .toolbar::-webkit-scrollbar { display: none; }
+    .tool { flex-shrink: 0; background: transparent; border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .tool:hover { background: var(--active); }
     .tool.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-    .tool.danger { color: var(--danger); border-color: var(--danger); }
-    .spacer { flex: 1; }
-    .save-state { font-size: 11px; color: var(--muted); white-space: nowrap; }
-    .menu-btn { display: none; }
+    .tool.ins { min-width: 46px; font-size: 14px; }
+    .sep { width: 1px; height: 22px; background: var(--line); flex-shrink: 0; margin: 0 2px; }
+    .save-state { flex-shrink: 0; margin-left: auto; padding-left: 8px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 
-    .editor-wrap { flex: 1; overflow: auto; display: flex; justify-content: center; }
-    .editor {
-      width: 100%; max-width: 760px; padding: 40px 32px 120px;
-      display: flex; flex-direction: column;
-    }
-    .title-input {
-      border: none; outline: none; background: transparent; font-size: 1.7rem; font-weight: 700;
-      color: var(--ink-strong); padding: 0 0 14px; margin-bottom: 18px; border-bottom: 1px dashed var(--line);
-      width: 100%;
-    }
-    .title-input::placeholder, .body-input::placeholder { color: var(--muted); opacity: 0.7; }
-    .body-input {
-      flex: 1; min-height: 60vh; border: none; outline: none; background: transparent; resize: none;
-      font-size: var(--fs, 17px); line-height: 2; color: var(--ink); width: 100%;
-      letter-spacing: 0.02em;
-    }
-    body.serif .body-input, body.serif .title-input { font-family: 'Noto Serif JP', serif; }
+    .view { flex: 1; overflow: auto; }
+
+    /* エディタ */
+    .editor { max-width: 760px; margin: 0 auto; padding: 32px 32px 120px; display: flex; flex-direction: column; min-height: 100%; }
+    .ch-head { display: flex; align-items: flex-end; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 12px; margin-bottom: 18px; }
+    .ch-title { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 1.5rem; font-weight: 700; color: var(--ink-strong); padding: 0; }
+    .goal-field { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); flex-shrink: 0; padding-bottom: 4px; }
+    .goal-field input { width: 84px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 13px; text-align: right; outline: none; }
+    .goal-field input:focus { border-color: var(--accent); }
+    .body-input, .preview { flex: 1; font-size: var(--fs, 17px); line-height: 2; letter-spacing: 0.02em; color: var(--ink); }
+    .body-input { min-height: 60vh; width: 100%; border: none; outline: none; background: transparent; resize: none; padding: 0; }
+    .ch-title::placeholder, .body-input::placeholder { color: var(--muted); opacity: 0.7; }
+    .preview p { margin: 0; min-height: 1em; }
+    .preview rt { font-size: 0.5em; color: var(--muted); }
+    body.serif .body-input, body.serif .preview, body.serif .ch-title { font-family: 'Noto Serif JP', serif; }
+    .ch-foot { margin-top: 30px; display: flex; justify-content: flex-end; }
+    .danger-link { border: none; background: none; color: var(--danger); font-size: 12px; font-weight: 700; padding: 6px; }
 
     /* 縦書き */
-    body.vertical .editor-wrap { justify-content: flex-start; }
-    body.vertical .editor { max-width: none; padding: 32px; flex-direction: row-reverse; }
-    body.vertical .body-input {
-      writing-mode: vertical-rl; text-orientation: mixed; min-height: 0; height: 100%;
-      min-width: 100%; line-height: 2;
-    }
-    body.vertical .title-input {
-      writing-mode: vertical-rl; width: auto; height: 100%; border-bottom: none;
-      border-left: 1px dashed var(--line); padding: 0 0 0 14px; margin: 0 0 0 18px;
-    }
+    body.vertical .editor { max-width: none; margin: 0; height: 100%; min-height: 0; padding: 28px 28px 28px; flex-direction: row-reverse; }
+    body.vertical .ch-head { writing-mode: vertical-rl; flex-direction: row; align-items: flex-start; border-bottom: none; border-left: 1px dashed var(--line); padding: 0 0 0 12px; margin: 0 0 0 18px; }
+    body.vertical .ch-title { width: auto; height: 100%; }
+    body.vertical .goal-field { padding: 0 4px 0 0; }
+    body.vertical .goal-field input { writing-mode: horizontal-tb; }
+    body.vertical .body-input, body.vertical .preview { writing-mode: vertical-rl; text-orientation: mixed; min-height: 0; height: 100%; min-width: 0; overflow-x: auto; }
+    body.vertical .ch-foot { display: none; }
 
-    /* ---------- ステータスバー ---------- */
-    .statusbar {
-      display: flex; align-items: center; gap: 18px; padding: 10px 18px;
-      border-top: 1px solid var(--line); background: var(--panel); font-size: 12px; color: var(--muted);
-      flex-wrap: wrap;
-    }
-    .stat b { color: var(--ink-strong); font-weight: 700; font-size: 14px; margin-right: 2px; }
-    .goal { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-    .goal input {
-      width: 76px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px;
-      background: var(--bg); font-size: 12px; text-align: right; outline: none;
-    }
-    .goal-bar { width: 110px; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
-    .goal-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
-    .goal-fill.done { background: #1e9e5a; }
+    /* 作品詳細 */
+    .detail { max-width: 760px; margin: 0 auto; padding: 32px 24px 100px; }
+    .detail-grid { display: grid; grid-template-columns: 200px 1fr; gap: 28px; }
+    .cover { position: relative; width: 200px; aspect-ratio: 1 / 1.414; border-radius: 12px; overflow: hidden; background: var(--active); border: 2px dashed var(--line); display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 12px; cursor: pointer; }
+    .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .cover.has-img { border-style: solid; }
+    .cover-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: center; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--muted); margin: 0 0 6px; letter-spacing: 1px; }
+    .work-title-input { width: 100%; border: none; border-bottom: 2px solid var(--line); background: transparent; font-size: 1.6rem; font-weight: 700; color: var(--ink-strong); padding: 4px 0 10px; outline: none; margin-bottom: 20px; }
+    .work-title-input:focus { border-color: var(--accent); }
+    .synopsis { width: 100%; min-height: 180px; border: 2px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px 14px; font-size: 15px; line-height: 1.9; outline: none; resize: vertical; }
+    .synopsis:focus { border-color: var(--accent); }
+    .goal-card { margin-top: 32px; background: var(--panel); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+    .goal-card h3 { margin: 0 0 4px; font-size: 14px; color: var(--ink-strong); }
+    .goal-card .note { font-size: 11px; color: var(--muted); margin: 0 0 12px; }
+    table.goals { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.goals td, table.goals th { padding: 9px 6px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+    table.goals td:first-child, table.goals th:first-child { text-align: left; }
+    table.goals th { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+    table.goals tfoot td { font-weight: 700; border-bottom: none; color: var(--ink-strong); }
+    table.goals tr.link { cursor: pointer; }
+    table.goals tr.link:hover td { background: var(--active); }
+    table.goals input { width: 80px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); text-align: right; font-size: 12px; outline: none; }
+    .detail-foot { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .meta { font-size: 11px; color: var(--muted); }
+
+    .empty-view { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); padding: 24px; text-align: center; }
 
     /* 集中モード */
-    body.focus .sidebar, body.focus .statusbar { display: none; }
-    body.focus .toolbar { opacity: 0.15; transition: opacity 0.2s; }
-    body.focus .toolbar:hover { opacity: 1; }
+    body.focus .sidebar { display: none; }
+    body.focus .toolbar { opacity: 0.2; transition: opacity 0.2s; }
+    body.focus .toolbar:hover, body.focus .toolbar:focus-within { opacity: 1; }
 
-    .toast {
-      position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%) translateY(20px);
-      background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 12px;
-      font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 50;
-    }
+    /* モーダル */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+    .modal { width: 100%; max-width: 380px; background: var(--panel); border-radius: 18px; padding: 22px; box-shadow: var(--shadow); }
+    .modal h3 { margin: 0 0 14px; font-size: 15px; color: var(--ink-strong); }
+    .modal label { display: block; font-size: 11px; color: var(--muted); font-weight: 700; margin: 10px 0 5px; }
+    .modal input { width: 100%; padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 16px; outline: none; }
+    .modal input:focus { border-color: var(--accent); }
+    .ruby-preview { margin-top: 14px; padding: 12px; background: var(--bg); border-radius: 10px; text-align: center; font-size: 20px; min-height: 56px; }
+    .ruby-preview rt { font-size: 0.5em; color: var(--muted); }
+    .modal-btns { display: flex; gap: 8px; margin-top: 18px; }
+    .modal-btns button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+    .btn-ghost { background: transparent; border: 1px solid var(--line); }
+    .modal-btns .btn-primary { padding: 12px; }
+
+    .toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%) translateY(20px); background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 80; white-space: nowrap; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
     .scrim { display: none; }
+    .menu-btn { display: none; }
 
     @media (max-width: 760px) {
-      .sidebar {
-        position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%);
-        box-shadow: var(--shadow); width: min(300px, 85vw);
-      }
+      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%); box-shadow: var(--shadow); width: min(320px, 88vw); }
+      body.no-sidebar .sidebar { display: flex; }
       body.drawer .sidebar { transform: translateX(0); }
       body.drawer .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 20; }
       .menu-btn { display: inline-block; }
-      .editor { padding: 24px 16px 100px; }
-      .title-input { font-size: 1.35rem; }
-      .hide-sm { display: none; }
-      .statusbar { gap: 12px; padding: 8px 16px; }
-      .goal { margin-left: 0; }
+      .side-toggle { display: none; }
+      .topbar { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+      .crumb { order: 1; flex-basis: calc(100% - 70px); }
+      .counts { order: 3; width: 100%; }
+      .count { flex: 1; min-width: 0; }
+      .menu-btn { order: 0; }
+      .editor { padding: 22px 16px 100px; }
+      .ch-title { font-size: 1.2rem; }
+      .detail { padding: 22px 16px 80px; }
+      .detail-grid { grid-template-columns: 1fr; gap: 18px; }
+      .cover-wrap { display: flex; flex-direction: column; align-items: center; }
+      .cover { width: 160px; }
+      .toolbar { padding: 8px 12px; }
+      body.vertical .editor { padding: 18px 14px; }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-head">
-        <div class="brand">ライティング</div>
-        <button class="btn-new" id="newBtn" title="新規作成 (Ctrl+Alt+N)">＋ 新規</button>
+  <!-- ログイン -->
+  <div class="gate" id="gate" hidden>
+    <form class="gate-box" id="gateForm" autocomplete="off">
+      <h1>小説ライティング</h1>
+      <p>この端末で初めて使うときだけパスワードが必要です</p>
+      <input id="gateInput" type="password" placeholder="パスワード" autocomplete="current-password" required>
+      <button type="submit">ログイン</button>
+      <div class="gate-err" id="gateErr"></div>
+    </form>
+  </div>
+
+  <div class="app" id="app" hidden>
+    <aside class="sidebar">
+      <div class="side-head">
+        <div class="brand">小説ライティング</div>
+        <button class="btn-primary" id="newWorkBtn">＋ 作品</button>
       </div>
-      <div class="search"><input id="searchInput" type="search" placeholder="文書を検索"></div>
-      <ul class="doc-list" id="docList"></ul>
+      <div class="tree" id="tree"></div>
+      <div class="side-foot">
+        <button class="chip" id="backupBtn" title="全作品をファイルに保存">バックアップ</button>
+        <button class="chip" id="restoreBtn" title="バックアップファイルから復元">復元</button>
+        <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+      </div>
     </aside>
     <div class="scrim" id="scrim"></div>
 
     <main class="main">
-      <div class="toolbar">
-        <button class="tool menu-btn" id="menuBtn" aria-label="文書一覧">☰ 一覧</button>
-        <button class="tool" id="verticalBtn" title="縦書き / 横書き">縦書き</button>
-        <button class="tool hide-sm" id="serifBtn" title="明朝 / ゴシック">明朝</button>
-        <button class="tool" id="fontDown" title="文字を小さく">A−</button>
-        <button class="tool" id="fontUp" title="文字を大きく">A＋</button>
-        <button class="tool" id="focusBtn" title="集中モード (Esc で解除)">集中</button>
-        <button class="tool" id="themeBtn" title="テーマ切替">明暗</button>
-        <span class="spacer"></span>
-        <span class="save-state" id="saveState">保存済み</span>
-        <button class="tool" id="copyBtn">コピー</button>
-        <button class="tool hide-sm" id="exportBtn">書き出し</button>
-        <button class="tool danger" id="deleteBtn">削除</button>
-      </div>
-
-      <div class="editor-wrap">
-        <div class="editor">
-          <input class="title-input" id="titleInput" type="text" placeholder="タイトル" maxlength="120">
-          <textarea class="body-input" id="bodyInput" placeholder="ここに書き始めましょう…"></textarea>
+      <div class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="メニュー">☰</button>
+        <button class="icon-btn side-toggle" id="sideToggle" title="メニューの表示切替">☰</button>
+        <div class="crumb" id="crumb"></div>
+        <div class="counts" id="counts">
+          <div class="count" id="chCount"><small>この話</small><span>0/0</span><div class="bar"><i></i></div></div>
+          <div class="count" id="wkCount"><small>作品</small><span>0/0</span><div class="bar"><i></i></div></div>
         </div>
       </div>
 
-      <div class="statusbar">
-        <span class="stat"><b id="sChars">0</b>文字</span>
-        <span class="stat"><b id="sNoSpace">0</b>空白除く</span>
-        <span class="stat hide-sm"><b id="sLines">0</b>行</span>
-        <span class="stat hide-sm"><b id="sPara">0</b>段落</span>
-        <span class="stat"><b id="sGenko">0</b>枚 <span class="hide-sm">(原稿用紙)</span></span>
-        <span class="stat hide-sm">読了 約<b id="sRead">0</b>分</span>
-        <span class="goal">
-          目標 <input id="goalInput" type="number" min="0" step="100" placeholder="なし" inputmode="numeric">
-          <span class="goal-bar"><span class="goal-fill" id="goalFill"></span></span>
-          <span id="goalPct">–</span>
-        </span>
+      <div class="toolbar" id="toolbar">
+        <button class="tool" id="verticalBtn" title="縦書き / 横書き">縦書き</button>
+        <button class="tool" id="previewBtn" title="ルビを表示して確認">プレビュー</button>
+        <span class="sep"></span>
+        <button class="tool" id="rubyBtn" title="選択した文字にルビを振る">ルビ</button>
+        <button class="tool ins" data-ins="……" title="三点リーダー（2つ）">……</button>
+        <button class="tool ins" data-ins="――" title="ダッシュ（2つ）">――</button>
+        <button class="tool ins" data-ins="　" title="全角スペース（字下げ）">字下</button>
+        <span class="sep"></span>
+        <button class="tool" id="fontDown" title="文字を小さく">A−</button>
+        <button class="tool" id="fontUp" title="文字を大きく">A＋</button>
+        <button class="tool" id="serifBtn" title="明朝 / ゴシック">明朝</button>
+        <button class="tool" id="themeBtn" title="ダーク / ライト">明暗</button>
+        <button class="tool" id="focusBtn" title="集中モード（Escで解除）">集中</button>
+        <span class="save-state" id="saveState">保存済み</span>
       </div>
+
+      <div class="view" id="view"></div>
     </main>
   </div>
+
   <div class="toast" id="toast"></div>
+  <input type="file" id="coverFile" accept="image/*" hidden>
 
   <script>
-    (() => {
-      const STORE_KEY = 'writing-app:docs:v1';
-      const PREF_KEY = 'writing-app:prefs:v1';
-      const $ = (id) => document.getElementById(id);
+  (() => {
+    'use strict';
+    // ===== 設定 =====
+    // パスワードを変える場合：SHA-256('novel-writer:v1:' + 新パスワード) の16進文字列に置き換える
+    const PASS_HASH = '6b3c2cc7e2df209889c85d60f1142e5a6d82ae5f42722cfa7440d583e67cc738';
+    const PASS_SALT = 'novel-writer:v1:';
+    const AUTH_KEY = 'novel:auth';
+    const PREF_KEY = 'novel:prefs';
+    const SAVE_DELAY = 1500; // 入力が止まってから保存するまで（ミリ秒）
 
-      // ---------- ストレージ（使えない環境でも動く） ----------
-      const store = {
-        get(key, fallback) {
-          try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-          catch { return fallback; }
+    const $ = (id) => document.getElementById(id);
+    const ls = {
+      get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+    };
+    function h(tag, attrs, ...kids) {
+      const el = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs || {})) {
+        if (v == null || v === false) continue;
+        if (k === 'class') el.className = v;
+        else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+        else if (k in el && typeof v !== 'string') el[k] = v;
+        else el.setAttribute(k, v);
+      }
+      for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+      return el;
+    }
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const fmt = (n) => Number(n || 0).toLocaleString('ja-JP');
+    const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    let toastTimer;
+    function toast(msg) {
+      const t = $('toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+    }
+
+    // ===== 認証（端末ごとに一度だけ） =====
+    async function sha256(s) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    function isAuthed() {
+      if (ls.get(AUTH_KEY, null) === PASS_HASH) return true;
+      return document.cookie.split('; ').some((c) => c === 'novel_auth=' + PASS_HASH.slice(0, 32));
+    }
+    function rememberDevice() {
+      ls.set(AUTH_KEY, PASS_HASH);
+      try {
+        document.cookie = 'novel_auth=' + PASS_HASH.slice(0, 32) + '; max-age=315360000; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+      } catch {}
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    }
+    function showGate() {
+      $('gate').hidden = false;
+      $('gateInput').focus();
+      $('gateForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const hash = await sha256(PASS_SALT + $('gateInput').value);
+          if (hash === PASS_HASH) {
+            rememberDevice();
+            $('gate').hidden = true;
+            start();
+          } else {
+            $('gateErr').textContent = 'パスワードが違います';
+            $('gateInput').select();
+          }
+        } catch {
+          $('gateErr').textContent = 'このブラウザでは認証できません（https で開いてください）';
+        }
+      });
+    }
+
+    // ===== 保存先（IndexedDB、使えなければ localStorage） =====
+    const DB = {
+      db: null,
+      open() {
+        return new Promise((res) => {
+          try {
+            const r = indexedDB.open('novel-writer', 1);
+            r.onupgradeneeded = () => r.result.createObjectStore('works', { keyPath: 'id' });
+            r.onsuccess = () => { this.db = r.result; res(true); };
+            r.onerror = () => res(false);
+            r.onblocked = () => res(false);
+          } catch { res(false); }
+        });
+      },
+      req(mode, fn) {
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction('works', mode);
+          const out = fn(tx.objectStore('works'));
+          tx.oncomplete = () => res(out && out.result);
+          tx.onerror = () => rej(tx.error);
+          tx.onabort = () => rej(tx.error);
+        });
+      },
+      async all() { return this.db ? this.req('readonly', (s) => s.getAll()) : ls.get('novel:works', []); },
+      async put(w) { if (this.db) return this.req('readwrite', (s) => s.put(w)); if (!ls.set('novel:works', state.works)) throw new Error('quota'); },
+      async del(id) { if (this.db) return this.req('readwrite', (s) => s.delete(id)); ls.set('novel:works', state.works); }
+    };
+
+    // ===== 状態 =====
+    const state = {
+      works: [],
+      prefs: Object.assign({
+        view: null,            // { type: 'chapter'|'detail', workId, chapterId }
+        open: {},              // 展開中の作品
+        fontSize: 17, vertical: false, serif: false, theme: null, sidebar: true, preview: false
+      }, ls.get(PREF_KEY, {})),
+      sorting: null            // 並び替え中の作品ID
+    };
+    const savePrefs = () => ls.set(PREF_KEY, state.prefs);
+    const getWork = (id) => state.works.find((w) => w.id === id);
+    const getChapter = (w, id) => w && w.chapters.find((c) => c.id === id);
+    function current() {
+      const v = state.prefs.view;
+      if (!v) return {};
+      const work = getWork(v.workId);
+      if (!work) return {};
+      return { work, chapter: v.type === 'chapter' ? getChapter(work, v.chapterId) : null, type: v.type };
+    }
+
+    // ===== 文字数（ルビ記法・空白・改行を除く） =====
+    const segmenter = (window.Intl && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'grapheme' }) : null;
+    const graphemes = (s) => segmenter ? [...segmenter.segment(s)].length : [...s].length;
+    const KANJI = '々〆ヵヶ〇\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF';
+    const RE_RUBY_EXPLICIT = /[|｜]([^|｜《》\n]{1,50}?)《([^《》\n]{1,50})》/g;
+    const RE_RUBY_IMPLICIT = new RegExp('([' + KANJI + ']+)《([^《》\\n]{1,50})》', 'g');
+    function stripRuby(s) {
+      return s.replace(RE_RUBY_EXPLICIT, '$1').replace(RE_RUBY_IMPLICIT, '$1');
+    }
+    const countText = (s) => graphemes(stripRuby(s || '').replace(/\s/g, ''));
+    function renderRubyHTML(s) {
+      // HTML エスケープ後もルビ記号はそのまま残るので、その上で変換
+      return esc(s)
+        .replace(RE_RUBY_EXPLICIT, '<ruby>$1<rp>(</rp><rt>$2</rt><rp>)</rp></ruby>')
+        .replace(RE_RUBY_IMPLICIT, '<ruby>$1<rp>(</rp><rt>$2</rt><rp>)</rp></ruby>');
+    }
+    const chCount = (c) => (c._count != null ? c._count : (c._count = countText(c.body)));
+    const workTotals = (w) => w.chapters.reduce((a, c) => ({ count: a.count + chCount(c), goal: a.goal + (Number(c.goal) || 0) }), { count: 0, goal: 0 });
+    const ratio = (n, g) => `${fmt(n)}/${fmt(g)}`;
+
+    // ===== 自動保存（入力が止まってから一定時間後） =====
+    const dirty = new Set();
+    let saveTimer = null;
+    function touch(work) {
+      work.updated = Date.now();
+      dirty.add(work.id);
+      setSaveState('未保存…');
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(flush, SAVE_DELAY);
+    }
+    async function flush() {
+      clearTimeout(saveTimer); saveTimer = null;
+      if (!dirty.size) return true;
+      const ids = [...dirty]; dirty.clear();
+      setSaveState('保存中…');
+      try {
+        for (const id of ids) {
+          const w = getWork(id);
+          if (w) await DB.put(serialize(w));
+        }
+        const d = new Date();
+        setSaveState(`保存済み ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+        return true;
+      } catch (e) {
+        ids.forEach((id) => dirty.add(id));
+        setSaveState('⚠ 保存に失敗しました');
+        toast('保存できませんでした。容量不足の可能性があります');
+        return false;
+      }
+    }
+    function serialize(w) {
+      return { ...w, chapters: w.chapters.map(({ _count, ...c }) => c) };
+    }
+    const setSaveState = (t) => { $('saveState').textContent = t; };
+    window.addEventListener('pagehide', () => { flush(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty.size) { flush(); e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // ===== データ操作 =====
+    function newChapter(w, title) {
+      const n = w.chapters.length + 1;
+      const c = { id: uid(), title: title || `第${n}話`, body: '', goal: 0, created: Date.now(), updated: Date.now(), _count: 0 };
+      w.chapters.push(c);
+      return c;
+    }
+    function createWork() {
+      const w = { id: uid(), title: '無題の作品', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now() };
+      newChapter(w);
+      state.works.unshift(w);
+      state.prefs.open[w.id] = true;
+      touch(w);
+      return w;
+    }
+    function navigate(view) {
+      flush();
+      state.prefs.view = view;
+      if (view && view.workId) state.prefs.open[view.workId] = true;
+      savePrefs();
+      document.body.classList.remove('drawer');
+      render();
+    }
+
+    // ===== メニュー（階層） =====
+    function renderTree() {
+      const tree = $('tree');
+      tree.innerHTML = '';
+      const cur = current();
+      if (!state.works.length) {
+        tree.append(h('div', { class: 'empty-tree' }, '作品がありません。', h('br'), '「＋ 作品」から始めましょう。'));
+        return;
+      }
+      for (const w of state.works) {
+        const open = !!state.prefs.open[w.id];
+        const sorting = state.sorting === w.id;
+        const t = workTotals(w);
+        const workEl = h('div', { class: 'work' + (open ? ' open' : '') + (sorting ? ' sorting' : '') });
+        workEl.append(h('div', {
+          class: 'work-row' + (cur.work === w && cur.type === 'detail' ? ' active' : ''),
+          onclick: () => navigate({ type: 'detail', workId: w.id })
         },
-        set(key, value) {
-          try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-          catch { return false; }
+          h('button', { class: 'twisty', 'aria-label': '開閉', onclick: (e) => { e.stopPropagation(); state.prefs.open[w.id] = !open; if (!state.prefs.open[w.id] && state.sorting === w.id) state.sorting = null; savePrefs(); renderTree(); } }, '▶'),
+          h('span', { class: 'work-name', title: w.title }, w.title || '無題の作品'),
+          h('span', { class: 'mini' + (t.goal && t.count >= t.goal ? ' done' : '') }, ratio(t.count, t.goal))
+        ));
+        const ul = h('ul', { class: 'chapters' });
+        w.chapters.forEach((c, i) => {
+          const done = c.goal && chCount(c) >= c.goal;
+          const li = h('li', {
+            class: 'ch-row' + (cur.chapter === c ? ' active' : ''),
+            'data-id': c.id,
+            onclick: () => { if (!sorting) navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); }
+          },
+            h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, w, li, ul) }, '≡'),
+            h('span', { class: 'ch-no' }, i + 1),
+            h('span', { class: 'ch-name' }, c.title || '（無題）'),
+            h('span', { class: 'mini' + (done ? ' done' : '') }, ratio(chCount(c), c.goal || 0)),
+            h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); move(w, i, -1); } }, '↑'),
+            h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); move(w, i, 1); } }, '↓')
+          );
+          ul.append(li);
+        });
+        workEl.append(ul);
+        workEl.append(h('div', { class: 'work-actions' },
+          h('button', { class: 'chip', onclick: () => { state.sorting = null; const c = newChapter(w); touch(w); navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); setTimeout(() => { const t = document.querySelector('.ch-title'); t && t.select(); }, 0); } }, '＋ サブタイトル'),
+          w.chapters.length > 1 ? h('button', { class: 'chip' + (sorting ? ' on' : ''), onclick: () => { state.sorting = sorting ? null : w.id; renderTree(); } }, sorting ? '並び替え完了' : '並び替え') : null
+        ));
+        tree.append(workEl);
+      }
+    }
+    function move(w, i, d) {
+      const j = i + d;
+      if (j < 0 || j >= w.chapters.length) return;
+      const [c] = w.chapters.splice(i, 1);
+      w.chapters.splice(j, 0, c);
+      touch(w); renderTree(); renderMainLight();
+    }
+    function startDrag(e, w, li, ul) {
+      if (state.sorting !== w.id) return;
+      e.preventDefault(); e.stopPropagation();
+      const pid = e.pointerId;
+      li.classList.add('dragging');
+      const onMove = (ev) => {
+        if (ev.pointerId !== pid) return;
+        ev.preventDefault();
+        const y = ev.clientY;
+        const others = [...ul.children].filter((x) => x !== li);
+        let before = null;
+        for (const o of others) {
+          const r = o.getBoundingClientRect();
+          if (y < r.top + r.height / 2) { before = o; break; }
         }
+        if (before) { if (li.nextSibling !== before) ul.insertBefore(li, before); }
+        else if (ul.lastChild !== li) ul.append(li);
       };
-
-      let docs = store.get(STORE_KEY, []);
-      if (!Array.isArray(docs)) docs = [];
-      const prefs = Object.assign(
-        { current: null, fontSize: 17, vertical: false, serif: false, theme: null },
-        store.get(PREF_KEY, {})
-      );
-
-      const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-      const now = () => Date.now();
-
-      function newDoc() {
-        const d = { id: uid(), title: '', body: '', goal: 0, created: now(), updated: now() };
-        docs.unshift(d);
-        return d;
-      }
-      if (docs.length === 0) newDoc();
-      let current = docs.find(d => d.id === prefs.current) || docs[0];
-
-      // ---------- 文字数カウント ----------
-      const seg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'grapheme' }) : null;
-      const countGraphemes = (s) => seg ? [...seg.segment(s)].length : [...s].length;
-
-      function genkoSheets(text) {
-        // 原稿用紙（20字×20行）換算：段落ごとに改行して行数を数える
-        if (!text.trim()) return 0;
-        let lines = 0;
-        for (const p of text.split('\n')) {
-          lines += Math.max(1, Math.ceil(countGraphemes(p) / 20));
-        }
-        return Math.ceil(lines / 20 * 10) / 10;
-      }
-
-      function stats(text) {
-        const chars = countGraphemes(text.replace(/\n/g, ''));
-        const noSpace = countGraphemes(text.replace(/\s/g, ''));
-        const lines = text ? text.split('\n').length : 0;
-        const para = text.split('\n').filter(p => p.trim()).length;
-        return { chars, noSpace, lines, para, genko: genkoSheets(text), read: Math.ceil(noSpace / 500) };
-      }
-
-      // ---------- 描画 ----------
-      const fmtDate = (t) => {
-        const d = new Date(t), n = new Date();
-        const pad = (x) => String(x).padStart(2, '0');
-        if (d.toDateString() === n.toDateString()) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        return `${d.getFullYear() !== n.getFullYear() ? d.getFullYear() + '/' : ''}${d.getMonth() + 1}/${d.getDate()}`;
+      const onUp = (ev) => {
+        if (ev.pointerId !== pid) return;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        li.classList.remove('dragging');
+        const order = [...ul.children].map((x) => x.dataset.id);
+        const before = w.chapters.map((c) => c.id).join();
+        w.chapters.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+        if (before !== w.chapters.map((c) => c.id).join()) touch(w);
+        renderTree(); renderMainLight();
       };
-      const firstLine = (s) => (s || '').split('\n').find(l => l.trim()) || '';
+      // 行をDOM上で動かすとポインタキャプチャが外れるため window で受け取る
+      window.addEventListener('pointermove', onMove, { passive: false });
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    }
 
-      function renderList() {
-        const q = $('searchInput').value.trim().toLowerCase();
-        const list = $('docList');
-        list.innerHTML = '';
-        const shown = docs
-          .slice()
-          .sort((a, b) => b.updated - a.updated)
-          .filter(d => !q || (d.title + '\n' + d.body).toLowerCase().includes(q));
-        if (shown.length === 0) {
-          const li = document.createElement('li');
-          li.className = 'empty-list';
-          li.textContent = q ? '見つかりませんでした' : '文書がありません';
-          list.appendChild(li);
-          return;
-        }
-        for (const d of shown) {
-          const li = document.createElement('li');
-          li.className = 'doc-item' + (d.id === current.id ? ' active' : '');
-          const t = document.createElement('div'); t.className = 'doc-title';
-          t.textContent = d.title.trim() || firstLine(d.body).slice(0, 40) || '無題';
-          const sn = document.createElement('div'); sn.className = 'doc-snippet';
-          sn.textContent = d.title.trim() ? firstLine(d.body).slice(0, 60) : '';
-          const m = document.createElement('div'); m.className = 'doc-meta';
-          const a = document.createElement('span'); a.textContent = fmtDate(d.updated);
-          const b = document.createElement('span'); b.textContent = stats(d.body).chars.toLocaleString() + '字';
-          m.append(a, b);
-          li.append(t);
-          if (sn.textContent) li.append(sn);
-          li.append(m);
-          li.addEventListener('click', () => { openDoc(d.id); document.body.classList.remove('drawer'); });
-          list.appendChild(li);
-        }
+    // ===== 文字数表示（常時） =====
+    function setCount(el, n, g, label) {
+      el.querySelector('small').textContent = label;
+      el.querySelector('span').textContent = ratio(n, g);
+      el.querySelector('.bar i').style.width = (g ? Math.min(100, n / g * 100) : 0) + '%';
+      el.classList.toggle('done', !!g && n >= g);
+    }
+    function renderCounts() {
+      const { work, chapter } = current();
+      $('counts').hidden = !work;
+      if (!work) return;
+      $('chCount').hidden = !chapter;
+      if (chapter) setCount($('chCount'), chCount(chapter), Number(chapter.goal) || 0, 'この話');
+      const t = workTotals(work);
+      setCount($('wkCount'), t.count, t.goal, '作品');
+    }
+    function renderCrumb() {
+      const { work, chapter } = current();
+      const c = $('crumb');
+      c.innerHTML = '';
+      if (!work) { c.textContent = '小説ライティング'; return; }
+      if (chapter) {
+        c.append(h('a', { onclick: () => navigate({ type: 'detail', workId: work.id }) }, work.title || '無題の作品'), ' ） ', h('b', {}, chapter.title || '（無題）'));
+      } else {
+        c.append(h('b', {}, work.title || '無題の作品'), ' ） 作品詳細');
       }
+    }
+    // 並び替えなどで番号だけ変わったときの軽い更新
+    function renderMainLight() { renderCrumb(); renderCounts(); if (current().type === 'detail') renderView(); }
 
-      function renderStats() {
-        const s = stats(current.body);
-        $('sChars').textContent = s.chars.toLocaleString();
-        $('sNoSpace').textContent = s.noSpace.toLocaleString();
-        $('sLines').textContent = s.lines.toLocaleString();
-        $('sPara').textContent = s.para.toLocaleString();
-        $('sGenko').textContent = s.genko;
-        $('sRead').textContent = s.read;
-        const goal = Number(current.goal) || 0;
-        const fill = $('goalFill');
-        if (goal > 0) {
-          const pct = Math.min(100, Math.round(s.chars / goal * 100));
-          fill.style.width = pct + '%';
-          fill.classList.toggle('done', s.chars >= goal);
-          $('goalPct').textContent = pct + '%';
-        } else {
-          fill.style.width = '0'; fill.classList.remove('done'); $('goalPct').textContent = '–';
-        }
-      }
-
-      function openDoc(id) {
-        flushSave();
-        const d = docs.find(x => x.id === id);
-        if (!d) return;
-        current = d;
-        prefs.current = d.id;
-        $('titleInput').value = d.title;
-        $('bodyInput').value = d.body;
-        $('goalInput').value = d.goal ? d.goal : '';
-        renderList(); renderStats(); savePrefs();
-      }
-
-      // ---------- 保存 ----------
-      let saveTimer = null;
-      function markDirty() {
-        current.updated = now();
-        $('saveState').textContent = '編集中…';
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(flushSave, 500);
-      }
-      function flushSave(force) {
-        if (saveTimer === null && !force) return;
-        clearTimeout(saveTimer); saveTimer = null;
-        const ok = store.set(STORE_KEY, docs);
-        $('saveState').textContent = ok ? '保存済み ' + fmtDate(now()) : '⚠ 保存できません（ブラウザの設定を確認）';
-        renderList();
-        return ok;
-      }
-      const savePrefs = () => store.set(PREF_KEY, prefs);
-      window.addEventListener('beforeunload', () => flushSave());
-      document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
-
-      // ---------- 表示設定 ----------
-      function applyPrefs() {
-        document.documentElement.style.setProperty('--fs', prefs.fontSize + 'px');
-        document.body.classList.toggle('vertical', !!prefs.vertical);
-        document.body.classList.toggle('serif', !!prefs.serif);
-        $('verticalBtn').classList.toggle('on', !!prefs.vertical);
-        $('serifBtn').classList.toggle('on', !!prefs.serif);
-        if (prefs.theme) document.documentElement.setAttribute('data-theme', prefs.theme);
-        else document.documentElement.removeAttribute('data-theme');
-      }
-
-      let toastTimer;
-      function toast(msg) {
-        const t = $('toast'); t.textContent = msg; t.classList.add('show');
-        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
-      }
-
-      // ---------- イベント ----------
-      $('titleInput').addEventListener('input', (e) => { current.title = e.target.value; markDirty(); });
-      $('bodyInput').addEventListener('input', (e) => { current.body = e.target.value; markDirty(); renderStats(); });
-      $('goalInput').addEventListener('input', (e) => { current.goal = Math.max(0, parseInt(e.target.value, 10) || 0); markDirty(); renderStats(); });
-      $('searchInput').addEventListener('input', renderList);
-
-      $('newBtn').addEventListener('click', () => {
-        flushSave();
-        const d = newDoc();
-        store.set(STORE_KEY, docs);
-        openDoc(d.id);
-        document.body.classList.remove('drawer');
-        $('titleInput').focus();
-      });
-
-      $('deleteBtn').addEventListener('click', () => {
-        const name = current.title.trim() || firstLine(current.body).slice(0, 20) || '無題';
-        if (!confirm(`「${name}」を削除しますか？\nこの操作は取り消せません。`)) return;
-        clearTimeout(saveTimer); saveTimer = null;
-        docs = docs.filter(d => d.id !== current.id);
-        if (docs.length === 0) newDoc();
-        store.set(STORE_KEY, docs);
-        current = docs.slice().sort((a, b) => b.updated - a.updated)[0];
-        openDoc(current.id);
-        toast('削除しました');
-      });
-
-      $('copyBtn').addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(current.body); toast('本文をコピーしました'); }
-        catch {
-          const ta = $('bodyInput'); ta.focus(); ta.select();
-          try { document.execCommand('copy'); toast('本文をコピーしました'); } catch { toast('コピーできませんでした'); }
-        }
-      });
-
-      $('exportBtn').addEventListener('click', () => {
-        flushSave();
-        const name = (current.title.trim() || '無題').replace(/[\\/:*?"<>|]/g, '_');
-        const content = (current.title.trim() ? current.title.trim() + '\n\n' : '') + current.body;
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = name + '.txt';
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      });
-
-      $('verticalBtn').addEventListener('click', () => { prefs.vertical = !prefs.vertical; applyPrefs(); savePrefs(); });
-      $('serifBtn').addEventListener('click', () => { prefs.serif = !prefs.serif; applyPrefs(); savePrefs(); });
-      $('fontUp').addEventListener('click', () => { prefs.fontSize = Math.min(28, prefs.fontSize + 1); applyPrefs(); savePrefs(); });
-      $('fontDown').addEventListener('click', () => { prefs.fontSize = Math.max(12, prefs.fontSize - 1); applyPrefs(); savePrefs(); });
-      $('themeBtn').addEventListener('click', () => {
-        const dark = prefs.theme ? prefs.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-        prefs.theme = dark ? 'light' : 'dark'; applyPrefs(); savePrefs();
-      });
-      $('focusBtn').addEventListener('click', () => {
-        const on = document.body.classList.toggle('focus');
-        $('focusBtn').classList.toggle('on', on);
-        if (on) { toast('集中モード（Esc で解除）'); $('bodyInput').focus(); }
-      });
-      $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
-      $('scrim').addEventListener('click', () => document.body.classList.remove('drawer'));
-
-      $('titleInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('bodyInput').focus(); }
-      });
-
-      document.addEventListener('keydown', (e) => {
-        const mod = e.ctrlKey || e.metaKey;
-        if (e.key === 'Escape') {
-          document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on');
-        } else if (mod && e.key.toLowerCase() === 's') {
-          e.preventDefault(); if (flushSave(true)) toast('保存しました');
-        } else if (mod && e.altKey && e.key.toLowerCase() === 'n') {
-          e.preventDefault(); $('newBtn').click();
-        }
-      });
-
-      // ---------- 起動 ----------
+    // ===== メイン表示 =====
+    function render() {
       applyPrefs();
-      openDoc(current.id);
-      $('saveState').textContent = '保存済み';
-      if (!current.body) $('bodyInput').focus();
-    })();
+      renderTree();
+      renderCrumb();
+      renderCounts();
+      renderView();
+    }
+    function renderView() {
+      const view = $('view');
+      view.innerHTML = '';
+      view.scrollTop = 0;
+      const cur = current();
+      $('toolbar').hidden = cur.type !== 'chapter';
+      if (!cur.work) {
+        view.append(h('div', { class: 'empty-view' },
+          h('div', {}, state.works.length ? 'メニューから作品かサブタイトルを選んでください' : 'まずは作品を作りましょう'),
+          h('button', { class: 'btn-primary', onclick: () => { const w = createWork(); navigate({ type: 'chapter', workId: w.id, chapterId: w.chapters[0].id }); } }, '＋ 新しい作品')
+        ));
+        return;
+      }
+      if (cur.type === 'chapter' && cur.chapter) renderEditor(view, cur.work, cur.chapter);
+      else renderDetail(view, cur.work);
+    }
+
+    // --- エディタ ---
+    let bodyEl = null;
+    function renderEditor(view, work, ch) {
+      const titleEl = h('input', {
+        class: 'ch-title', type: 'text', value: ch.title, placeholder: 'サブタイトル', maxlength: '100',
+        oninput: (e) => { ch.title = e.target.value; ch.updated = Date.now(); touch(work); renderCrumb(); updateTreeRow(work, ch); },
+        onkeydown: (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bodyEl && bodyEl.focus(); } }
+      });
+      const goalEl = h('input', {
+        type: 'number', min: '0', step: '100', inputmode: 'numeric', placeholder: '0', value: ch.goal ? String(ch.goal) : '',
+        oninput: (e) => { ch.goal = Math.max(0, parseInt(e.target.value, 10) || 0); touch(work); renderCounts(); updateTreeRow(work, ch); }
+      });
+      bodyEl = h('textarea', {
+        class: 'body-input', placeholder: '本文を書きましょう…\nルビ：｜漢字《かんじ》', spellcheck: false,
+        oninput: () => onBodyInput(work, ch)
+      });
+      bodyEl.value = ch.body;
+      const preview = h('div', { class: 'preview' });
+      const ed = h('div', { class: 'editor' },
+        h('div', { class: 'ch-head' }, titleEl, h('label', { class: 'goal-field' }, '目標', goalEl, '字')),
+        state.prefs.preview ? preview : bodyEl,
+        h('div', { class: 'ch-foot' }, h('button', { class: 'danger-link', onclick: () => deleteChapter(work, ch) }, 'このサブタイトルを削除'))
+      );
+      if (state.prefs.preview) renderPreview(preview, ch.body);
+      view.append(ed);
+      if (state.prefs.vertical) view.scrollLeft = view.scrollWidth;
+    }
+    function renderPreview(el, text) {
+      el.innerHTML = text.split('\n').map((line) => `<p>${line ? renderRubyHTML(line) : '<br>'}</p>`).join('');
+    }
+    function onBodyInput(work, ch) {
+      ch.body = bodyEl.value;
+      ch._count = countText(ch.body);
+      ch.updated = Date.now();
+      touch(work);
+      renderCounts();
+      updateTreeRow(work, ch);
+    }
+    function updateTreeRow(work, ch) {
+      const row = document.querySelector(`.ch-row[data-id="${ch.id}"]`);
+      if (row) {
+        row.querySelector('.ch-name').textContent = ch.title || '（無題）';
+        const m = row.querySelector('.mini');
+        m.textContent = ratio(chCount(ch), ch.goal || 0);
+        m.classList.toggle('done', !!ch.goal && chCount(ch) >= ch.goal);
+      }
+      const wRow = row && row.closest('.work').querySelector('.work-row .mini');
+      if (wRow) {
+        const t = workTotals(work);
+        wRow.textContent = ratio(t.count, t.goal);
+        wRow.classList.toggle('done', !!t.goal && t.count >= t.goal);
+      }
+    }
+    function deleteChapter(work, ch) {
+      if (!confirm(`「${ch.title || '無題'}」を削除しますか？\n本文も削除され、元に戻せません。`)) return;
+      const i = work.chapters.indexOf(ch);
+      work.chapters.splice(i, 1);
+      touch(work);
+      const next = work.chapters[Math.min(i, work.chapters.length - 1)];
+      navigate(next ? { type: 'chapter', workId: work.id, chapterId: next.id } : { type: 'detail', workId: work.id });
+      toast('削除しました');
+    }
+
+    // --- 挿入（……、――、ルビ） ---
+    function insertText(text, selectStart, selectEnd) {
+      if (!bodyEl || !document.body.contains(bodyEl)) return;
+      bodyEl.focus();
+      const s = bodyEl.selectionStart;
+      // execCommand なら「元に戻す」が効く
+      let ok = false;
+      try { ok = document.execCommand('insertText', false, text); } catch {}
+      if (!ok) {
+        bodyEl.setRangeText(text, bodyEl.selectionStart, bodyEl.selectionEnd, 'end');
+        bodyEl.dispatchEvent(new Event('input'));
+      }
+      if (selectStart != null) bodyEl.setSelectionRange(s + selectStart, s + (selectEnd ?? selectStart));
+    }
+    function ensureEditMode() {
+      if (state.prefs.preview) { state.prefs.preview = false; savePrefs(); applyPrefs(); renderView(); }
+    }
+    document.querySelectorAll('[data-ins]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.preventDefault()); // キーボードを閉じない
+      b.addEventListener('click', () => { ensureEditMode(); insertText(b.dataset.ins); });
+    });
+    $('rubyBtn').addEventListener('pointerdown', (e) => e.preventDefault());
+    $('rubyBtn').addEventListener('click', () => {
+      ensureEditMode();
+      if (!bodyEl) return;
+      const s = bodyEl.selectionStart, e = bodyEl.selectionEnd;
+      const sel = bodyEl.value.slice(s, e).replace(/\n/g, '');
+      openRubyDialog(sel, (base, reading) => {
+        bodyEl.focus();
+        bodyEl.setSelectionRange(s, e);
+        insertText(`｜${base}《${reading}》`);
+      });
+    });
+    function openRubyDialog(base, done) {
+      const baseIn = h('input', { type: 'text', value: base, placeholder: '例：魔法', maxlength: '50' });
+      const readIn = h('input', { type: 'text', placeholder: '例：まほう', maxlength: '50' });
+      const pv = h('div', { class: 'ruby-preview' });
+      const upd = () => { pv.innerHTML = baseIn.value ? `<ruby>${esc(baseIn.value)}<rt>${esc(readIn.value)}</rt></ruby>` : ''; };
+      const close = () => { bg.remove(); bodyEl && bodyEl.focus(); };
+      const ok = () => {
+        const b = baseIn.value.replace(/[|｜《》]/g, '').trim(), r = readIn.value.replace(/[|｜《》]/g, '').trim();
+        if (!b || !r) { (b ? readIn : baseIn).focus(); return; }
+        bg.remove(); done(b, r);
+      };
+      const onKey = (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); ok(); } else if (e.key === 'Escape') close(); };
+      baseIn.addEventListener('input', upd); readIn.addEventListener('input', upd);
+      baseIn.addEventListener('keydown', onKey); readIn.addEventListener('keydown', onKey);
+      const bg = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === bg) close(); } },
+        h('div', { class: 'modal', role: 'dialog', 'aria-label': 'ルビを設定' },
+          h('h3', {}, 'ルビを設定'),
+          h('label', {}, '親文字'), baseIn,
+          h('label', {}, 'ふりがな'), readIn,
+          pv,
+          h('div', { class: 'modal-btns' },
+            h('button', { class: 'btn-ghost', onclick: close }, 'キャンセル'),
+            h('button', { class: 'btn-primary', onclick: ok }, '挿入'))
+        ));
+      document.body.append(bg);
+      upd();
+      (base ? readIn : baseIn).focus();
+    }
+
+    // --- 作品詳細 ---
+    function renderDetail(view, work) {
+      const t = workTotals(work);
+      const coverBox = h('div', { class: 'cover' + (work.cover ? ' has-img' : ''), onclick: () => $('coverFile').click(), title: '表紙画像を選択' },
+        work.cover ? h('img', { src: work.cover, alt: '表紙' }) : h('span', {}, 'タップして', h('br'), '表紙画像を設定'));
+      const titleIn = h('input', {
+        class: 'work-title-input', type: 'text', value: work.title, placeholder: '作品名', maxlength: '100',
+        oninput: (e) => { work.title = e.target.value; touch(work); renderCrumb(); const n = document.querySelector('.work-row.active .work-name'); if (n) n.textContent = work.title || '無題の作品'; }
+      });
+      const syn = h('textarea', {
+        class: 'synopsis', placeholder: 'あらすじを入力…',
+        oninput: (e) => { work.synopsis = e.target.value; touch(work); }
+      });
+      syn.value = work.synopsis || '';
+
+      const rows = work.chapters.map((c, i) => {
+        const goalIn = h('input', {
+          type: 'number', min: '0', step: '100', inputmode: 'numeric', placeholder: '0', value: c.goal ? String(c.goal) : '',
+          onclick: (e) => e.stopPropagation(),
+          oninput: (e) => { c.goal = Math.max(0, parseInt(e.target.value, 10) || 0); touch(work); refreshTotals(); }
+        });
+        return h('tr', { class: 'link', onclick: () => navigate({ type: 'chapter', workId: work.id, chapterId: c.id }) },
+          h('td', {}, `${i + 1}. ${c.title || '（無題）'}`),
+          h('td', {}, fmt(chCount(c))),
+          h('td', {}, goalIn));
+      });
+      const totalCount = h('td', {}, fmt(t.count)), totalGoal = h('td', {}, fmt(t.goal));
+      function refreshTotals() {
+        const tt = workTotals(work);
+        totalCount.textContent = fmt(tt.count); totalGoal.textContent = fmt(tt.goal);
+        renderCounts(); renderTree();
+      }
+
+      const d = new Date(work.created);
+      view.append(h('div', { class: 'detail' },
+        h('div', { class: 'detail-grid' },
+          h('div', { class: 'cover-wrap' },
+            coverBox,
+            work.cover ? h('div', { class: 'cover-actions' },
+              h('button', { class: 'chip', onclick: () => $('coverFile').click() }, '変更'),
+              h('button', { class: 'chip', onclick: () => { if (confirm('表紙画像を削除しますか？')) { work.cover = ''; touch(work); renderView(); } } }, '削除')) : null),
+          h('div', {},
+            h('div', { class: 'field-label' }, '作品名'), titleIn,
+            h('div', { class: 'field-label' }, 'あらすじ'), syn)
+        ),
+        h('div', { class: 'goal-card' },
+          h('h3', {}, '目標文字数'),
+          h('p', { class: 'note' }, '作品の目標はサブタイトルごとの目標の合計です。文字数はルビ記法・空白・改行を除いて数えます。'),
+          h('table', { class: 'goals' },
+            h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, '目標'))),
+            h('tbody', {}, rows.length ? rows : h('tr', {}, h('td', { colspan: '3' }, 'サブタイトルがありません'))),
+            h('tfoot', {}, h('tr', {}, h('td', {}, '合計'), totalCount, totalGoal)))
+          ,
+          h('div', { style: 'margin-top:12px' },
+            h('button', { class: 'chip', onclick: () => { const c = newChapter(work); touch(work); navigate({ type: 'chapter', workId: work.id, chapterId: c.id }); } }, '＋ サブタイトルを追加'))
+        ),
+        h('div', { class: 'detail-foot' },
+          h('span', { class: 'meta' }, `作成日 ${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}・全${work.chapters.length}話`),
+          h('button', { class: 'danger-link', onclick: () => deleteWork(work) }, 'この作品を削除'))
+      ));
+    }
+    async function deleteWork(work) {
+      if (!confirm(`作品「${work.title || '無題'}」を削除しますか？\nすべてのサブタイトルと本文が削除され、元に戻せません。`)) return;
+      if (prompt('確認のため「削除」と入力してください') !== '削除') return;
+      state.works = state.works.filter((w) => w !== work);
+      dirty.delete(work.id);
+      try { await DB.del(work.id); } catch {}
+      navigate(null);
+      toast('作品を削除しました');
+    }
+
+    // 表紙画像：縮小して保存
+    $('coverFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      const { work } = current();
+      if (!file || !work) return;
+      try {
+        work.cover = await resizeImage(file, 900);
+        touch(work); await flush();
+        renderView();
+      } catch { toast('画像を読み込めませんでした'); }
+    });
+    function resizeImage(file, max) {
+      return new Promise((res, rej) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const s = Math.min(1, max / Math.max(img.width, img.height));
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+          ctx.drawImage(img, 0, 0, cv.width, cv.height);
+          URL.revokeObjectURL(url);
+          res(cv.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); rej(); };
+        img.src = url;
+      });
+    }
+
+    // ===== 表示設定 =====
+    function applyPrefs() {
+      const p = state.prefs;
+      document.documentElement.style.setProperty('--fs', p.fontSize + 'px');
+      document.body.classList.toggle('vertical', !!p.vertical);
+      document.body.classList.toggle('serif', !!p.serif);
+      document.body.classList.toggle('no-sidebar', !p.sidebar);
+      $('verticalBtn').classList.toggle('on', !!p.vertical);
+      $('verticalBtn').textContent = p.vertical ? '横書き' : '縦書き';
+      $('previewBtn').classList.toggle('on', !!p.preview);
+      $('serifBtn').classList.toggle('on', !!p.serif);
+      if (p.theme) document.documentElement.setAttribute('data-theme', p.theme);
+      else document.documentElement.removeAttribute('data-theme');
+    }
+    const toggle = (key, rerender) => () => { state.prefs[key] = !state.prefs[key]; savePrefs(); applyPrefs(); if (rerender) { flush(); renderView(); } };
+    $('verticalBtn').addEventListener('click', toggle('vertical', true));
+    $('previewBtn').addEventListener('click', toggle('preview', true));
+    $('serifBtn').addEventListener('click', toggle('serif'));
+    $('sideToggle').addEventListener('click', toggle('sidebar'));
+    $('fontUp').addEventListener('click', () => { state.prefs.fontSize = Math.min(30, state.prefs.fontSize + 1); savePrefs(); applyPrefs(); });
+    $('fontDown').addEventListener('click', () => { state.prefs.fontSize = Math.max(12, state.prefs.fontSize - 1); savePrefs(); applyPrefs(); });
+    $('themeBtn').addEventListener('click', () => {
+      const dark = state.prefs.theme ? state.prefs.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      state.prefs.theme = dark ? 'light' : 'dark'; savePrefs(); applyPrefs();
+    });
+    $('focusBtn').addEventListener('click', () => {
+      const on = document.body.classList.toggle('focus');
+      $('focusBtn').classList.toggle('on', on);
+      if (on) toast('集中モード（Escで解除）');
+    });
+    $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
+    $('scrim').addEventListener('click', () => document.body.classList.remove('drawer'));
+    $('newWorkBtn').addEventListener('click', () => {
+      const w = createWork();
+      navigate({ type: 'detail', workId: w.id });
+      setTimeout(() => { const t = document.querySelector('.work-title-input'); if (t) { t.focus(); t.select(); } }, 0);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on'); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); dirty.size ? flush().then((ok) => ok && toast('保存しました')) : toast('保存済みです'); }
+    });
+
+    // ===== バックアップ／復元 =====
+    $('backupBtn').addEventListener('click', async () => {
+      await flush();
+      const data = { app: 'novel-writer', version: 1, exported: new Date().toISOString(), works: state.works.map(serialize) };
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const d = new Date();
+      const a = h('a', { href: URL.createObjectURL(blob), download: `小説バックアップ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json` });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    });
+    $('restoreBtn').addEventListener('click', () => $('restoreFile').click());
+    $('restoreFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0]; e.target.value = '';
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        if (data.app !== 'novel-writer' || !Array.isArray(data.works)) throw new Error();
+        if (!confirm(`${data.works.length}作品を復元します。\n同じ作品がある場合は、バックアップの内容で上書きされます。よろしいですか？`)) return;
+        for (const w of data.works) {
+          if (!w.id || !Array.isArray(w.chapters)) continue;
+          const i = state.works.findIndex((x) => x.id === w.id);
+          if (i >= 0) state.works[i] = w; else state.works.push(w);
+          dirty.add(w.id);
+        }
+        await flush();
+        render();
+        toast('復元しました');
+      } catch { toast('バックアップファイルを読み込めませんでした'); }
+    });
+
+    // ===== 起動 =====
+    async function start() {
+      $('app').hidden = false;
+      await DB.open();
+      try { state.works = (await DB.all()) || []; } catch { state.works = []; }
+      state.works.sort((a, b) => b.created - a.created);
+      // 旧バージョン（単純なメモ形式）の文書を取り込む
+      const legacy = ls.get('writing-app:docs:v1', null);
+      if (Array.isArray(legacy) && legacy.some((d) => (d.body || d.title || '').trim()) && !ls.get('novel:migrated', false)) {
+        const w = { id: uid(), title: '以前の文書', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now() };
+        legacy.filter((d) => (d.body || d.title || '').trim()).forEach((d) => w.chapters.push({ id: uid(), title: d.title || '無題', body: d.body || '', goal: d.goal || 0, created: d.created || Date.now(), updated: d.updated || Date.now() }));
+        state.works.unshift(w); dirty.add(w.id);
+        ls.set('novel:migrated', true);
+        await flush();
+      }
+      if (!current().work) state.prefs.view = state.works[0] ? { type: 'detail', workId: state.works[0].id } : null;
+      if (state.prefs.view && state.prefs.view.type === 'chapter' && !current().chapter) state.prefs.view = { type: 'detail', workId: state.prefs.view.workId };
+      render();
+      setSaveState('保存済み');
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    }
+
+    if (isAuthed()) start(); else showGate();
+  })();
   </script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+{
+  "name": "小説ライティング",
+  "short_name": "小説",
+  "start_url": "./shipping-check-v8q2m9z4x.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f9",
+  "theme_color": "#f4f7f9",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
