@@ -306,10 +306,7 @@
         <button class="chip" id="syncBtn" title="今すぐ同期">同期</button>
       </div>
       <div class="side-foot">
-        <button class="chip" id="backupBtn" title="全作品をファイルに保存">バックアップ</button>
-        <button class="chip" id="restoreBtn" title="バックアップファイルから復元">復元</button>
-        <button class="chip" id="logoutBtn" style="margin-left:auto;color:var(--danger)">ログアウト</button>
-        <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+        <button class="chip" id="logoutBtn" style="color:var(--danger)">ログアウト</button>
       </div>
     </aside>
     <div class="scrim" id="scrim"></div>
@@ -1326,38 +1323,6 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on'); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush().then(() => sync()); }
-    });
-
-    // ===== バックアップ／復元 =====
-    $('backupBtn').addEventListener('click', async () => {
-      await flush();
-      const data = { app: 'novel-writer', version: 1, exported: new Date().toISOString(), works: state.works.map(remoteData) };
-      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      const d = new Date();
-      const a = h('a', { href: URL.createObjectURL(blob), download: `のべるんバックアップ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json` });
-      document.body.append(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    });
-    $('restoreBtn').addEventListener('click', () => $('restoreFile').click());
-    $('restoreFile').addEventListener('change', async (e) => {
-      const file = e.target.files[0]; e.target.value = '';
-      if (!file) return;
-      try {
-        const data = JSON.parse(await file.text());
-        if (data.app !== 'novel-writer' || !Array.isArray(data.works)) throw new Error();
-        if (!confirm(`${data.works.length}作品を復元します。\n同じ作品がある場合は、バックアップの内容で上書きされます。よろしいですか？`)) return;
-        for (const w of data.works) {
-          if (!w.id || !Array.isArray(w.chapters)) continue;
-          const i = state.works.findIndex((x) => x.id === w.id);
-          const restored = { ...w, _remoteVer: i >= 0 ? state.works[i]._remoteVer : null };
-          markSaved(restored);
-          if (i >= 0) state.works[i] = restored; else state.works.push(restored);
-          dirty.add(w.id);
-        }
-        await flush();
-        render();
-        toast('復元しました');
-      } catch { toast('バックアップファイルを読み込めませんでした'); }
     });
 
     // ===== 起動 =====
