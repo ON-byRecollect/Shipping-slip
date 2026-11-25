@@ -128,7 +128,7 @@
     .tree-rename { flex: 1; min-width: 0; height: 34px; align-self: center; border: none; border-radius: 8px; background: var(--fill); padding: 0 9px; font-size: 16px; line-height: 34px; outline: none; color: var(--ink-strong); }
     .tree-rename.rn-work { font-weight: 600; font-size: 17px; }
     .tree-rename:focus { box-shadow: 0 0 0 2px var(--accent); }
-    .ch-rename { width: calc(100% - 34px); border: none; border-radius: 7px; background: var(--fill); padding: 5px 8px; font-size: 16px; outline: none; vertical-align: middle; }
+    .ch-rename { width: calc(100% - 36px); min-width: 0; padding: 7px 10px; border: none; border-radius: 7px; background: var(--fill); padding: 5px 8px; font-size: 16px; outline: none; vertical-align: middle; }
     .modal-btns button:disabled { cursor: default; }
     .del-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 16px; line-height: 22px; margin-right: 10px; vertical-align: middle; font-weight: 700; }
     .row-tools { display: inline-flex; gap: 2px; align-items: center; }
@@ -232,6 +232,10 @@
     table.goals { width: 100%; border-collapse: collapse; font-size: 16px; }
     table.goals td, table.goals th { padding: 10px 16px 10px 0; text-align: right; font-variant-numeric: tabular-nums; position: relative; }
     table.goals td:first-child, table.goals th:first-child { text-align: left; padding-left: 16px; max-width: 0; width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* 編集中はサブタイトル名の入力欄を広く取る（文字数・並び替え列は最小限に） */
+    .detail.editing table.goals td:first-child, .detail.editing table.goals th:first-child { width: 80%; max-width: none; }
+    .detail.editing table.goals td:nth-child(2), .detail.editing table.goals th:nth-child(2) { width: 1%; white-space: nowrap; }
+    .detail.editing table.goals td:nth-child(3), .detail.editing table.goals th:nth-child(3) { width: 1%; white-space: nowrap; }
     table.goals tbody tr td, table.goals tfoot td { border-top: 0.5px solid var(--line); }
     table.goals th { font-size: 12px; color: var(--muted); font-weight: 400; padding-top: 10px; padding-bottom: 6px; }
     table.goals tfoot td { font-weight: 600; color: var(--ink-strong); }
@@ -239,6 +243,7 @@
     table.goals tr.link { cursor: pointer; }
     table.goals tr.link:active td { background: var(--fill); }
     table.goals input { width: 88px; padding: 5px 8px; border: none; border-radius: 7px; background: var(--fill); text-align: right; font-size: 16px; outline: none; }
+    table.goals input.ch-rename { width: calc(100% - 36px); text-align: left; padding: 7px 10px; } /* 名前の入力欄は幅いっぱい・左寄せ */
 
     .empty-view { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--muted); padding: 24px; text-align: center; font-size: 15px; background: var(--bg); }
     .btn-primary { background: var(--accent); color: #fff; border-radius: 12px; padding: 13px 22px; font-weight: 600; font-size: 17px; }
