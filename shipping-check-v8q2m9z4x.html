@@ -1413,19 +1413,29 @@
       const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
       return known > 0 && known - h > 20 && known - h <= 200;
     }
+    // 前回成功した操作を最初に試す（端末ごとに覚える）
+    const REPAIR_BEST_KEY = 'noverun:repairBest';
+    let repairing = false, repairCooldown = 0;
     function startRepair() {
       clearTimeout(repairTimer);
-      let n = 0;
+      const best = Math.max(0, repairTricks.findIndex((t) => t[0] === ls.get(REPAIR_BEST_KEY, '')));
+      const order = [best, ...repairTricks.map((_, i) => i).filter((i) => i !== best)];
+      let n = 0, lastName = null;
+      repairing = true;
       const step = () => {
         fitViewport();
-        if (!needsRepair()) { if (n) repairStat.result = '成功(' + n + '回目)'; return; }
-        if (n >= 15) { repairStat.result = '失敗'; return; }
-        const [name, fn] = repairTricks[n % repairTricks.length];
-        n++; repairStat.tries++; repairStat.last = name;
+        if (!needsRepair()) {
+          repairing = false;
+          if (n) { repairStat.result = '成功(' + n + '回目)'; if (lastName) ls.set(REPAIR_BEST_KEY, lastName); }
+          return;
+        }
+        if (n >= 25) { repairing = false; repairCooldown = Date.now() + 10000; repairStat.result = '失敗'; return; }
+        const [name, fn] = repairTricks[order[n % order.length]];
+        n++; repairStat.tries++; repairStat.last = name; lastName = name;
         try { fn(); } catch {}
-        repairTimer = setTimeout(step, 450);
+        repairTimer = setTimeout(step, 160);
       };
-      repairTimer = setTimeout(step, 350);
+      repairTimer = setTimeout(step, 60);
     }
     function onOrientation() {
       fitSoon();
@@ -1437,7 +1447,7 @@
       const onMq = () => { if (mq.matches !== lastLand) { lastLand = mq.matches; onOrientation(); } };
       if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
     }
-    window.addEventListener('resize', fitSoon);
+    window.addEventListener('resize', () => { fitSoon(); if (!repairing && Date.now() > repairCooldown && needsRepair()) startRepair(); });
     window.addEventListener('orientationchange', onOrientation);
     window.addEventListener('pageshow', fitSoon);
     document.addEventListener('focusout', () => setTimeout(() => { if (!isTyping()) fitSoon(); }, 50));
