@@ -260,6 +260,14 @@
       .menu-btn { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; width: 48px; height: auto; min-height: 36px; background: var(--fill); border-radius: 12px; }
       .crumb { grid-column: 2; grid-row: 1; }
       .counts { grid-column: 2; grid-row: 2; width: auto; min-width: 0; padding-bottom: 2px; }
+      /* 作品詳細：「作品」カウントを右端に置き、横幅を詰めて2段分の高さにする */
+      body.view-detail .topbar { grid-template-columns: auto minmax(0, 1fr) auto; }
+      body.view-detail .crumb { grid-row: 1 / span 2; }
+      body.view-detail .counts { grid-column: 3; grid-row: 1 / span 2; align-self: stretch; padding-bottom: 0; }
+      body.view-detail .count { flex: none; width: auto; min-width: 104px; max-width: 46vw; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 6px 12px; border-radius: 12px; }
+      body.view-detail .count small { font-size: 12px; }
+      body.view-detail .count span { margin-left: 0; font-size: 18px; }
+      body.view-detail .count .bar { flex-basis: auto; margin-top: 4px; }
       .count { flex: 1; min-width: 0; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 0 8px; }
       .count small { font-size: 11px; }
       .count span { margin-left: auto; }
@@ -959,6 +967,7 @@
       requestAnimationFrame(() => { if (keepScroll) view.scrollTop = top; });
       const cur = current();
       $('toolbar').hidden = cur.type !== 'chapter';
+      document.body.classList.toggle('view-detail', !!cur.work && cur.type !== 'chapter');
       if (!cur.work) {
         view.append(h('div', { class: 'empty-view' },
           h('div', {}, state.works.length ? 'メニューから作品かサブタイトルを選んでください' : 'まずは作品を作りましょう'),
