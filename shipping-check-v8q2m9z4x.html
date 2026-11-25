@@ -1326,13 +1326,31 @@
     // ===== 表示領域への追従（iOS 対策） =====
     // 回転・キーボードの開閉・タップ後に iOS がページをずらしたままにすることがあるため、
     // アプリの枠を常に「実際に見えている領域」にぴったり合わせる
-    const isTyping = () => { const a = document.activeElement; return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type !== 'button')); };
+    // 見えている入力欄にフォーカスがあるか（隠れたログイン欄などは除く）
+    const isTyping = () => {
+      const a = document.activeElement;
+      return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type !== 'button' && a.type !== 'file')) && a.offsetParent !== null;
+    };
+    const isIOSStandalone = () => (navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches))
+      && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
     function fitViewport() {
       const vv = window.visualViewport;
       const app = $('app');
       if (!isTyping() && (window.scrollY || window.scrollX)) window.scrollTo(0, 0);
-      const h = vv ? vv.height : window.innerHeight;
-      const top = vv && isTyping() ? vv.offsetTop : 0;
+      let h = vv ? vv.height : window.innerHeight;
+      let keyboard = isTyping();
+      // iOS のホーム画面アプリでは、縦→横の回転後に報告される高さが短いまま残る不具合がある。
+      // 全画面表示のときは端末の画面サイズ（回転の影響を受けない）から本来の高さを求める
+      if (isIOSStandalone()) {
+        const sw = Math.min(screen.width, screen.height), sh = Math.max(screen.width, screen.height);
+        const land = window.innerWidth > window.innerHeight;
+        const fullW = land ? sh : sw, fullH = land ? sw : sh;
+        if (Math.abs(window.innerWidth - fullW) <= 2) { // 分割表示などでは使わない
+          keyboard = keyboard && fullH - h > 150;          // 本当にキーボードが開いているか
+          if (!keyboard) h = Math.max(h, fullH);
+        }
+      }
+      const top = vv && keyboard ? vv.offsetTop : 0;
       app.style.height = Math.round(h) + 'px';
       app.style.top = Math.round(top) + 'px';
     }
