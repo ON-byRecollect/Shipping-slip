@@ -353,12 +353,6 @@
     .mark-swatch { background: linear-gradient(transparent 55%, rgba(255, 214, 0, 0.6) 55%); padding: 0 2px; }
     body.vertical .body-wrap { height: 100%; }
     body.vertical .body-mirror { writing-mode: vertical-rl; text-orientation: mixed; }
-    /* 文字の大きさに合わせたカーソル（標準のカーソルは透明にする） */
-    .body-wrap textarea.body-input { caret-color: transparent; }
-    .fake-caret { position: absolute; z-index: 2; width: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; }
-    .fake-caret.v { height: 2px; }
-    .fake-caret.blink { animation: caret-blink 1.06s steps(1) 0.5s infinite; }
-    @keyframes caret-blink { 50% { opacity: 0; } }
   </style>
 </head>
 <body>
@@ -438,7 +432,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-8';
+    const APP_VERSION = '2026.11.25-9';
     if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
@@ -1141,13 +1135,9 @@
       // マーカー表示用：入力欄の真下に同じ文字組みの層を重ね、印の部分だけ黄色く塗る
       markEl = h('div', { class: 'body-input body-mirror', 'aria-hidden': 'true' });
       bodyEl.addEventListener('scroll', syncMarkScroll, { passive: true });
-      bodyEl.addEventListener('focus', scheduleCaret);
-      bodyEl.addEventListener('blur', () => { if (caretEl) caretEl.hidden = true; });
-      bodyEl.addEventListener('keyup', scheduleCaret);
-      bodyEl.addEventListener('pointerup', () => setTimeout(scheduleCaret, 0));
       bodyPrev = bodyEl.value;
       const ed = h('div', { class: 'editor' + (state.prefs.preview ? '' : ' fill') },
-        state.prefs.preview ? preview : h('div', { class: 'body-wrap' }, markEl, bodyEl, caretEl = h('div', { class: 'fake-caret', hidden: true }))
+        state.prefs.preview ? preview : h('div', { class: 'body-wrap' }, markEl, bodyEl)
       );
       if (state.prefs.preview) renderPreview(preview, ch.body, ch.marks);
       else renderMarks(ch);
@@ -1187,65 +1177,15 @@
       html += esc(text.slice(pos)) + '\u200b'; // 末尾の改行を反映させるため
       markEl.innerHTML = '<div class="mirror-inner">' + html + '</div>';
       syncMarkScroll();
-      scheduleCaret();
     }
     // 入力欄のスクロール量（跳ね返りで負になる場合も含む）をそのまま印の層に反映する
     function syncMarkScroll() {
       if (!markEl || !bodyEl) return;
       const inner = markEl.firstChild;
       if (inner) inner.style.transform = `translate(${-bodyEl.scrollLeft}px, ${-bodyEl.scrollTop}px)`;
-      scheduleCaret();
     }
 
-    // ===== 文字の大きさに合わせたカーソル =====
-    // iOS 標準のカーソルは行の高さ（行間込み）で描かれるため、標準のカーソルを透明にし、
-    // 重ねた層で位置を測って文字の大きさのカーソルを描く
-    let caretEl = null, caretRaf = 0;
-    function scheduleCaret() {
-      if (caretRaf) return;
-      caretRaf = requestAnimationFrame(() => { caretRaf = 0; placeCaret(); });
-    }
-    function placeCaret() {
-      if (!caretEl || !bodyEl || !markEl || !document.body.contains(bodyEl)) return;
-      const off = bodyEl.selectionStart;
-      if (document.activeElement !== bodyEl || off !== bodyEl.selectionEnd || bodyEl.disabled) { caretEl.hidden = true; return; }
-      const inner = markEl.firstChild;
-      if (!inner) { caretEl.hidden = true; return; }
-      // 位置 off の文字が入っているテキストノードを探す
-      const walker = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT);
-      let node = null, rest = off, n;
-      while ((n = walker.nextNode())) {
-        if (rest <= n.length) { node = n; break; }
-        rest -= n.length;
-      }
-      if (!node) { caretEl.hidden = true; return; }
-      // その位置に幅のない目印を一瞬差し込んで座標を測る
-      const probe = document.createElement('span');
-      probe.textContent = '\u200b';
-      const range = document.createRange();
-      range.setStart(node, rest); range.collapse(true);
-      range.insertNode(probe);
-      const r = probe.getBoundingClientRect();
-      probe.remove();
-      inner.normalize();
-      const w = caretEl.parentNode.getBoundingClientRect();
-      const fs = parseFloat(getComputedStyle(bodyEl).fontSize) || 17;
-      const vertical = document.body.classList.contains('vertical');
-      caretEl.classList.toggle('v', vertical);
-      if (vertical) {
-        caretEl.style.left = (r.left + r.width / 2 - fs / 2 - w.left) + 'px';
-        caretEl.style.top = (r.top - w.top) + 'px';
-        caretEl.style.width = fs + 'px'; caretEl.style.height = '';
-      } else {
-        caretEl.style.left = (r.left - w.left) + 'px';
-        caretEl.style.top = (r.top + r.height / 2 - fs * 0.55 - w.top) + 'px';
-        caretEl.style.height = Math.round(fs * 1.1) + 'px'; caretEl.style.width = '';
-      }
-      caretEl.hidden = false;
-      // 動いた直後は点滅をやり直して見失わないように
-      caretEl.classList.remove('blink'); void caretEl.offsetWidth; caretEl.classList.add('blink');
-    }
-    document.addEventListener('selectionchange', () => { if (document.activeElement === bodyEl) scheduleCaret(); });
+
     // 入力で文字がずれた分だけ印の位置もずらす
     function shiftMarks(ch, oldText, newText) {
       if (!ch.marks || !ch.marks.length || oldText === newText) return;
@@ -1540,7 +1480,6 @@
     function applyPrefs() {
       const p = state.prefs;
       document.documentElement.style.setProperty('--fs', p.fontSize + 'px');
-      if (typeof scheduleCaret === 'function') scheduleCaret();
       document.body.classList.toggle('vertical', !!p.vertical);
       document.body.classList.toggle('no-sidebar', !p.sidebar);
       $('verticalBtn').classList.toggle('on', !!p.vertical);
