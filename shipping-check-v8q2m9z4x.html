@@ -186,13 +186,16 @@
       body.no-sidebar .main, body.focus .main { --pl: max(env(safe-area-inset-left), 24px); }
     }
 
-    .toolbar { display: flex; align-items: center; gap: 2px; padding: 4px 8px; background: var(--bar); border-bottom: 0.5px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .toolbar { display: flex; align-items: center; gap: 2px; padding: 4px 8px; background: var(--bar); border-bottom: 0.5px solid var(--line); overflow: hidden; }
+    /* ボタンだけを横スクロールさせ、同期状態は右端に固定して常に見せる */
+    .tool-scroll { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); padding-right: 20px; }
+    .tool-scroll::-webkit-scrollbar { display: none; }
     .toolbar::-webkit-scrollbar { display: none; }
     .tool { flex-shrink: 0; color: var(--accent); border-radius: 8px; padding: 8px 10px; font-size: 15px; white-space: nowrap; }
     .tool.on { background: var(--active); font-weight: 600; }
     .tool.ins { min-width: 44px; font-size: 16px; }
     .sep { width: 0.5px; height: 20px; background: var(--line); flex-shrink: 0; margin: 0 4px; }
-    .save-state { flex-shrink: 0; margin-left: auto; padding: 0 6px 0 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .save-state { flex-shrink: 0; margin-left: auto; padding: 0 6px 0 8px; border-left: 0.5px solid var(--line); font-size: 12px; color: var(--muted); white-space: nowrap; }
 
     .view { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; }
 
@@ -202,7 +205,7 @@
     .ch-title { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 28px; font-weight: 700; color: var(--ink-strong); padding: 0; letter-spacing: 0.01em; }
     .goal-field { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); flex-shrink: 0; }
     .goal-field input { width: 92px; padding: 6px 10px; border: none; border-radius: 8px; background: var(--fill); font-size: 16px; text-align: right; outline: none; font-variant-numeric: tabular-nums; }
-    .body-input, .preview { flex: 1; font-size: var(--fs, 17px); line-height: 1.95; letter-spacing: 0.03em; color: var(--ink); }
+    .body-input, .preview { flex: 1; font-size: var(--fs, 17px); line-height: 1.7; /* iOS のカーソルは行の高さで描かれるため詰め気味に */ letter-spacing: 0.03em; color: var(--ink); }
     .body-input { min-height: 60vh; width: 100%; border: none; outline: none; background: transparent; resize: none; padding: 0; caret-color: var(--accent); }
     .ch-title::placeholder, .body-input::placeholder { color: var(--muted2); }
     .preview p { margin: 0; min-height: 1em; }
@@ -342,7 +345,8 @@
     .body-wrap { position: relative; flex: 1; min-height: 0; display: flex; }
     .body-wrap .body-input { position: relative; z-index: 1; background: transparent; }
     .body-mirror { position: absolute !important; inset: 0; z-index: 0 !important; overflow: hidden !important; color: transparent; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; pointer-events: none; -webkit-user-select: none; user-select: none; }
-    .body-input { white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; }
+    .body-input { white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; overscroll-behavior: none; scrollbar-gutter: stable; }
+    .mirror-inner { will-change: transform; }
     .body-mirror mark, .preview mark { background: rgba(255, 214, 0, 0.45); color: inherit; border-radius: 2px; }
     .body-mirror mark { color: transparent; }
     @media (prefers-color-scheme: dark) { .body-mirror mark, .preview mark { background: rgba(255, 214, 10, 0.32); } }
@@ -400,6 +404,7 @@
       </div>
 
       <div class="toolbar" id="toolbar">
+        <div class="tool-scroll">
         <button class="tool" id="verticalBtn" title="縦書き / 横書き">縦書き</button>
         <button class="tool" id="previewBtn" title="ルビを表示して確認">プレビュー</button>
         <button class="tool" id="focusBtn" title="集中モード（Escで解除）">集中</button>
@@ -412,6 +417,7 @@
         <span class="sep"></span>
         <button class="tool" id="fontDown" title="文字を小さく">A−</button>
         <button class="tool" id="fontUp" title="文字を大きく">A＋</button>
+        </div>
         <span class="save-state" id="saveState">保存済み</span>
       </div>
 
@@ -427,7 +433,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-5';
+    const APP_VERSION = '2026.11.25-6';
     if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
@@ -1129,7 +1135,7 @@
       const preview = h('div', { class: 'preview' });
       // マーカー表示用：入力欄の真下に同じ文字組みの層を重ね、印の部分だけ黄色く塗る
       markEl = h('div', { class: 'body-input body-mirror', 'aria-hidden': 'true' });
-      bodyEl.addEventListener('scroll', () => { markEl.scrollTop = bodyEl.scrollTop; markEl.scrollLeft = bodyEl.scrollLeft; });
+      bodyEl.addEventListener('scroll', syncMarkScroll, { passive: true });
       bodyPrev = bodyEl.value;
       const ed = h('div', { class: 'editor' + (state.prefs.preview ? '' : ' fill') },
         state.prefs.preview ? preview : h('div', { class: 'body-wrap' }, markEl, bodyEl)
@@ -1162,8 +1168,14 @@
         pos = b;
       }
       html += esc(text.slice(pos)) + '\u200b'; // 末尾の改行を反映させるため
-      markEl.innerHTML = html;
-      markEl.scrollTop = bodyEl.scrollTop; markEl.scrollLeft = bodyEl.scrollLeft;
+      markEl.innerHTML = '<div class="mirror-inner">' + html + '</div>';
+      syncMarkScroll();
+    }
+    // 入力欄のスクロール量（跳ね返りで負になる場合も含む）をそのまま印の層に反映する
+    function syncMarkScroll() {
+      if (!markEl || !bodyEl) return;
+      const inner = markEl.firstChild;
+      if (inner) inner.style.transform = `translate(${-bodyEl.scrollLeft}px, ${-bodyEl.scrollTop}px)`;
     }
     // 入力で文字がずれた分だけ印の位置もずらす
     function shiftMarks(ch, oldText, newText) {
