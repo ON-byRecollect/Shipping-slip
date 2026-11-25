@@ -2,181 +2,488 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#f4f7f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
 
-  <title>発送伝票</title>
+  <title>ライティング</title>
 
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
 
-  <link href="https://fonts.googleapis.com/css2?family=Line+Seed+JP:wght@700&display=swap" rel="stylesheet">
-  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Line+Seed+JP:wght@400;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'Line Seed JP', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; color: #333; }
-    input, button { font-family: 'Line Seed JP', sans-serif !important; }
-    .container { max-width: 500px; margin: auto; }
-    
-    .search-box { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 25px; }
-    h2 { text-align: center; margin-top: 0; color: #000; font-size: 1.5rem; margin-bottom: 25px; font-weight: 700; letter-spacing: 2px; }
-    
-    .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-    .input-row { position: relative; }
-    .input-row span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #bbb; font-weight: 700; }
-    
-    .id-input { width: 100%; padding: 12px 12px 12px 35px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.2s; }
-    .id-input:focus { border-color: #000; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+    :root {
+      --bg: #f4f7f9;
+      --panel: #ffffff;
+      --ink: #222;
+      --ink-strong: #000;
+      --muted: #8a8f95;
+      --line: #e8ebee;
+      --accent: #000;
+      --accent-ink: #fff;
+      --danger: #d93025;
+      --active: #eef1f4;
+      --shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff;
+        --muted: #8b9096; --line: #2c2e31; --accent: #fff; --accent-ink: #000;
+        --danger: #ff6b5e; --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.35);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff;
+      --muted: #8b9096; --line: #2c2e31; --accent: #fff; --accent-ink: #000;
+      --danger: #ff6b5e; --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.35);
+    }
 
-    .id-input.error-field { border-color: #d93025 !important; background: #fff1f0; }
-    .dup-msg { color: #d93025; font-size: 10px; font-weight: 700; margin-left: 35px; margin-top: 2px; display: none; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: 'Line Seed JP', sans-serif; font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea, select { font-family: inherit; color: inherit; }
+    button { cursor: pointer; }
 
-    .button-group { display: flex; gap: 10px; }
-    .btn-search { flex: 2; padding: 16px; background: #000; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 700; transition: opacity 0.2s; }
-    .btn-search:disabled { background: #ccc; cursor: not-allowed; }
-    .btn-reset { flex: 1; padding: 16px; background: #fff; color: #d93025; border: 2px solid #d93025; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; }
-    
-    .result-container { display: none; margin-top: 10px; }
-    .item-card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 18px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.02); }
-    .id-section { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee; }
-    .id-badge { display: flex; justify-content: center; align-items: center; background: #000; color: #fff; width: 40px; height: 40px; border-radius: 10px; font-size: 18px; font-weight: 700; }
-    .input-id-label { font-size: 12px; color: #888; font-weight: 700; }
-    .input-id-value { font-size: 18px; color: #000; font-weight: 700; }
-    .item-label { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 2px; }
-    .item-value { font-size: 19px; font-weight: 700; color: #222; margin-bottom: 12px; }
-    
-    .loading { text-align: center; color: #000; display: none; margin-top: 15px; font-weight: 700; }
-    .error-msg { background: #fff1f0; color: #d93025; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 5px; font-weight: 700; border: 1px solid #ffa39e; }
+    .app { display: flex; height: 100vh; height: 100dvh; }
+
+    /* ---------- サイドバー ---------- */
+    .sidebar {
+      width: 280px; flex-shrink: 0; background: var(--panel);
+      border-right: 1px solid var(--line); display: flex; flex-direction: column;
+      transition: transform 0.25s ease;
+    }
+    .sidebar-head { padding: 20px 16px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 700; font-size: 1.15rem; letter-spacing: 2px; color: var(--ink-strong); }
+    .btn-new {
+      background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px;
+      padding: 9px 14px; font-weight: 700; font-size: 13px;
+    }
+    .search { margin: 0 16px 10px; }
+    .search input {
+      width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px;
+      background: var(--bg); font-size: 14px; outline: none;
+    }
+    .search input:focus { border-color: var(--accent); }
+    .doc-list { list-style: none; margin: 0; padding: 4px 8px 16px; overflow-y: auto; flex: 1; }
+    .doc-item {
+      padding: 12px; border-radius: 12px; cursor: pointer; margin-bottom: 2px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .doc-item:hover { background: var(--active); }
+    .doc-item.active { background: var(--active); box-shadow: inset 3px 0 0 var(--accent); }
+    .doc-title { font-weight: 700; font-size: 14px; color: var(--ink-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+    .doc-snippet { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .empty-list { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 8px; }
+
+    /* ---------- メイン ---------- */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .toolbar {
+      display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+      border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap;
+    }
+    .tool {
+      background: transparent; border: 1px solid var(--line); border-radius: 9px;
+      padding: 7px 10px; font-size: 12px; font-weight: 700; color: var(--ink);
+      white-space: nowrap;
+    }
+    .tool:hover { background: var(--active); }
+    .tool.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .tool.danger { color: var(--danger); border-color: var(--danger); }
+    .spacer { flex: 1; }
+    .save-state { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .menu-btn { display: none; }
+
+    .editor-wrap { flex: 1; overflow: auto; display: flex; justify-content: center; }
+    .editor {
+      width: 100%; max-width: 760px; padding: 40px 32px 120px;
+      display: flex; flex-direction: column;
+    }
+    .title-input {
+      border: none; outline: none; background: transparent; font-size: 1.7rem; font-weight: 700;
+      color: var(--ink-strong); padding: 0 0 14px; margin-bottom: 18px; border-bottom: 1px dashed var(--line);
+      width: 100%;
+    }
+    .title-input::placeholder, .body-input::placeholder { color: var(--muted); opacity: 0.7; }
+    .body-input {
+      flex: 1; min-height: 60vh; border: none; outline: none; background: transparent; resize: none;
+      font-size: var(--fs, 17px); line-height: 2; color: var(--ink); width: 100%;
+      letter-spacing: 0.02em;
+    }
+    body.serif .body-input, body.serif .title-input { font-family: 'Noto Serif JP', serif; }
+
+    /* 縦書き */
+    body.vertical .editor-wrap { justify-content: flex-start; }
+    body.vertical .editor { max-width: none; padding: 32px; flex-direction: row-reverse; }
+    body.vertical .body-input {
+      writing-mode: vertical-rl; text-orientation: mixed; min-height: 0; height: 100%;
+      min-width: 100%; line-height: 2;
+    }
+    body.vertical .title-input {
+      writing-mode: vertical-rl; width: auto; height: 100%; border-bottom: none;
+      border-left: 1px dashed var(--line); padding: 0 0 0 14px; margin: 0 0 0 18px;
+    }
+
+    /* ---------- ステータスバー ---------- */
+    .statusbar {
+      display: flex; align-items: center; gap: 18px; padding: 10px 18px;
+      border-top: 1px solid var(--line); background: var(--panel); font-size: 12px; color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .stat b { color: var(--ink-strong); font-weight: 700; font-size: 14px; margin-right: 2px; }
+    .goal { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .goal input {
+      width: 76px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--bg); font-size: 12px; text-align: right; outline: none;
+    }
+    .goal-bar { width: 110px; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+    .goal-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+    .goal-fill.done { background: #1e9e5a; }
+
+    /* 集中モード */
+    body.focus .sidebar, body.focus .statusbar { display: none; }
+    body.focus .toolbar { opacity: 0.15; transition: opacity 0.2s; }
+    body.focus .toolbar:hover { opacity: 1; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%) translateY(20px);
+      background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 12px;
+      font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .scrim { display: none; }
+
+    @media (max-width: 760px) {
+      .sidebar {
+        position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%);
+        box-shadow: var(--shadow); width: min(300px, 85vw);
+      }
+      body.drawer .sidebar { transform: translateX(0); }
+      body.drawer .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 20; }
+      .menu-btn { display: inline-block; }
+      .editor { padding: 24px 16px 100px; }
+      .title-input { font-size: 1.35rem; }
+      .hide-sm { display: none; }
+      .statusbar { gap: 12px; padding: 8px 16px; }
+      .goal { margin-left: 0; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="search-box">
-      <h2>発送伝票</h2>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div class="brand">ライティング</div>
+        <button class="btn-new" id="newBtn" title="新規作成 (Ctrl+Alt+N)">＋ 新規</button>
+      </div>
+      <div class="search"><input id="searchInput" type="search" placeholder="文書を検索"></div>
+      <ul class="doc-list" id="docList"></ul>
+    </aside>
+    <div class="scrim" id="scrim"></div>
 
-      <div class="input-group">
-        <div class="input-row"><span>1</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 0)"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>2</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 1)"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>3</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 2)"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>4</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 3)"> <div class="dup-msg">重複しています</div></div>
-        <div class="input-row"><span>5</span><input type="text" class="id-input" placeholder="IDを入力" oninput="checkDuplicates()" onkeydown="handleEnter(event, 4)"> <div class="dup-msg">重複しています</div></div>
+    <main class="main">
+      <div class="toolbar">
+        <button class="tool menu-btn" id="menuBtn" aria-label="文書一覧">☰ 一覧</button>
+        <button class="tool" id="verticalBtn" title="縦書き / 横書き">縦書き</button>
+        <button class="tool hide-sm" id="serifBtn" title="明朝 / ゴシック">明朝</button>
+        <button class="tool" id="fontDown" title="文字を小さく">A−</button>
+        <button class="tool" id="fontUp" title="文字を大きく">A＋</button>
+        <button class="tool" id="focusBtn" title="集中モード (Esc で解除)">集中</button>
+        <button class="tool" id="themeBtn" title="テーマ切替">明暗</button>
+        <span class="spacer"></span>
+        <span class="save-state" id="saveState">保存済み</span>
+        <button class="tool" id="copyBtn">コピー</button>
+        <button class="tool hide-sm" id="exportBtn">書き出し</button>
+        <button class="tool danger" id="deleteBtn">削除</button>
       </div>
 
-      <div class="button-group">
-        <button id="searchBtn" class="btn-search" onclick="searchAll()">データ照合</button>
-        <button class="btn-reset" onclick="resetForm()">リセット</button>
+      <div class="editor-wrap">
+        <div class="editor">
+          <input class="title-input" id="titleInput" type="text" placeholder="タイトル" maxlength="120">
+          <textarea class="body-input" id="bodyInput" placeholder="ここに書き始めましょう…"></textarea>
+        </div>
       </div>
 
-      <div id="loading" class="loading">検索中...</div>
-      <div id="error-box"></div>
-    </div>
-    <div id="result" class="result-container"></div>
+      <div class="statusbar">
+        <span class="stat"><b id="sChars">0</b>文字</span>
+        <span class="stat"><b id="sNoSpace">0</b>空白除く</span>
+        <span class="stat hide-sm"><b id="sLines">0</b>行</span>
+        <span class="stat hide-sm"><b id="sPara">0</b>段落</span>
+        <span class="stat"><b id="sGenko">0</b>枚 <span class="hide-sm">(原稿用紙)</span></span>
+        <span class="stat hide-sm">読了 約<b id="sRead">0</b>分</span>
+        <span class="goal">
+          目標 <input id="goalInput" type="number" min="0" step="100" placeholder="なし" inputmode="numeric">
+          <span class="goal-bar"><span class="goal-fill" id="goalFill"></span></span>
+          <span id="goalPct">–</span>
+        </span>
+      </div>
+    </main>
   </div>
+  <div class="toast" id="toast"></div>
 
   <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbz6WHNfNJl7smm0R8JOL6TddnSYVUDlJ8VUYaYJbnOZRNKdKLI0noSdoB1J9iE66udrKg/exec";
+    (() => {
+      const STORE_KEY = 'writing-app:docs:v1';
+      const PREF_KEY = 'writing-app:prefs:v1';
+      const $ = (id) => document.getElementById(id);
 
-    function handleEnter(event, index) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const inputs = document.querySelectorAll('.id-input');
-        if (index < 4) {
-          inputs[index + 1].focus();
-        } else {
-          searchAll();
+      // ---------- ストレージ（使えない環境でも動く） ----------
+      const store = {
+        get(key, fallback) {
+          try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+          catch { return fallback; }
+        },
+        set(key, value) {
+          try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+          catch { return false; }
+        }
+      };
+
+      let docs = store.get(STORE_KEY, []);
+      if (!Array.isArray(docs)) docs = [];
+      const prefs = Object.assign(
+        { current: null, fontSize: 17, vertical: false, serif: false, theme: null },
+        store.get(PREF_KEY, {})
+      );
+
+      const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      const now = () => Date.now();
+
+      function newDoc() {
+        const d = { id: uid(), title: '', body: '', goal: 0, created: now(), updated: now() };
+        docs.unshift(d);
+        return d;
+      }
+      if (docs.length === 0) newDoc();
+      let current = docs.find(d => d.id === prefs.current) || docs[0];
+
+      // ---------- 文字数カウント ----------
+      const seg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'grapheme' }) : null;
+      const countGraphemes = (s) => seg ? [...seg.segment(s)].length : [...s].length;
+
+      function genkoSheets(text) {
+        // 原稿用紙（20字×20行）換算：段落ごとに改行して行数を数える
+        if (!text.trim()) return 0;
+        let lines = 0;
+        for (const p of text.split('\n')) {
+          lines += Math.max(1, Math.ceil(countGraphemes(p) / 20));
+        }
+        return Math.ceil(lines / 20 * 10) / 10;
+      }
+
+      function stats(text) {
+        const chars = countGraphemes(text.replace(/\n/g, ''));
+        const noSpace = countGraphemes(text.replace(/\s/g, ''));
+        const lines = text ? text.split('\n').length : 0;
+        const para = text.split('\n').filter(p => p.trim()).length;
+        return { chars, noSpace, lines, para, genko: genkoSheets(text), read: Math.ceil(noSpace / 500) };
+      }
+
+      // ---------- 描画 ----------
+      const fmtDate = (t) => {
+        const d = new Date(t), n = new Date();
+        const pad = (x) => String(x).padStart(2, '0');
+        if (d.toDateString() === n.toDateString()) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return `${d.getFullYear() !== n.getFullYear() ? d.getFullYear() + '/' : ''}${d.getMonth() + 1}/${d.getDate()}`;
+      };
+      const firstLine = (s) => (s || '').split('\n').find(l => l.trim()) || '';
+
+      function renderList() {
+        const q = $('searchInput').value.trim().toLowerCase();
+        const list = $('docList');
+        list.innerHTML = '';
+        const shown = docs
+          .slice()
+          .sort((a, b) => b.updated - a.updated)
+          .filter(d => !q || (d.title + '\n' + d.body).toLowerCase().includes(q));
+        if (shown.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'empty-list';
+          li.textContent = q ? '見つかりませんでした' : '文書がありません';
+          list.appendChild(li);
+          return;
+        }
+        for (const d of shown) {
+          const li = document.createElement('li');
+          li.className = 'doc-item' + (d.id === current.id ? ' active' : '');
+          const t = document.createElement('div'); t.className = 'doc-title';
+          t.textContent = d.title.trim() || firstLine(d.body).slice(0, 40) || '無題';
+          const sn = document.createElement('div'); sn.className = 'doc-snippet';
+          sn.textContent = d.title.trim() ? firstLine(d.body).slice(0, 60) : '';
+          const m = document.createElement('div'); m.className = 'doc-meta';
+          const a = document.createElement('span'); a.textContent = fmtDate(d.updated);
+          const b = document.createElement('span'); b.textContent = stats(d.body).chars.toLocaleString() + '字';
+          m.append(a, b);
+          li.append(t);
+          if (sn.textContent) li.append(sn);
+          li.append(m);
+          li.addEventListener('click', () => { openDoc(d.id); document.body.classList.remove('drawer'); });
+          list.appendChild(li);
         }
       }
-    }
 
-    function checkDuplicates() {
-      const inputs = document.querySelectorAll('.id-input');
-      const msgs = document.querySelectorAll('.dup-msg');
-      const searchBtn = document.getElementById('searchBtn');
-      const values = Array.from(inputs).map(i => i.value.trim());
-      let hasError = false;
-
-      inputs.forEach((input, i) => {
-        const val = values[i];
-        const isDup = val !== "" && values.filter((v, idx) => v === val && idx !== i).length > 0;
-        
-        if (isDup) {
-          input.classList.add('error-field');
-          msgs[i].style.display = 'block';
-          hasError = true;
+      function renderStats() {
+        const s = stats(current.body);
+        $('sChars').textContent = s.chars.toLocaleString();
+        $('sNoSpace').textContent = s.noSpace.toLocaleString();
+        $('sLines').textContent = s.lines.toLocaleString();
+        $('sPara').textContent = s.para.toLocaleString();
+        $('sGenko').textContent = s.genko;
+        $('sRead').textContent = s.read;
+        const goal = Number(current.goal) || 0;
+        const fill = $('goalFill');
+        if (goal > 0) {
+          const pct = Math.min(100, Math.round(s.chars / goal * 100));
+          fill.style.width = pct + '%';
+          fill.classList.toggle('done', s.chars >= goal);
+          $('goalPct').textContent = pct + '%';
         } else {
-          input.classList.remove('error-field');
-          msgs[i].style.display = 'none';
+          fill.style.width = '0'; fill.classList.remove('done'); $('goalPct').textContent = '–';
+        }
+      }
+
+      function openDoc(id) {
+        flushSave();
+        const d = docs.find(x => x.id === id);
+        if (!d) return;
+        current = d;
+        prefs.current = d.id;
+        $('titleInput').value = d.title;
+        $('bodyInput').value = d.body;
+        $('goalInput').value = d.goal ? d.goal : '';
+        renderList(); renderStats(); savePrefs();
+      }
+
+      // ---------- 保存 ----------
+      let saveTimer = null;
+      function markDirty() {
+        current.updated = now();
+        $('saveState').textContent = '編集中…';
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(flushSave, 500);
+      }
+      function flushSave(force) {
+        if (saveTimer === null && !force) return;
+        clearTimeout(saveTimer); saveTimer = null;
+        const ok = store.set(STORE_KEY, docs);
+        $('saveState').textContent = ok ? '保存済み ' + fmtDate(now()) : '⚠ 保存できません（ブラウザの設定を確認）';
+        renderList();
+        return ok;
+      }
+      const savePrefs = () => store.set(PREF_KEY, prefs);
+      window.addEventListener('beforeunload', () => flushSave());
+      document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
+
+      // ---------- 表示設定 ----------
+      function applyPrefs() {
+        document.documentElement.style.setProperty('--fs', prefs.fontSize + 'px');
+        document.body.classList.toggle('vertical', !!prefs.vertical);
+        document.body.classList.toggle('serif', !!prefs.serif);
+        $('verticalBtn').classList.toggle('on', !!prefs.vertical);
+        $('serifBtn').classList.toggle('on', !!prefs.serif);
+        if (prefs.theme) document.documentElement.setAttribute('data-theme', prefs.theme);
+        else document.documentElement.removeAttribute('data-theme');
+      }
+
+      let toastTimer;
+      function toast(msg) {
+        const t = $('toast'); t.textContent = msg; t.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+      }
+
+      // ---------- イベント ----------
+      $('titleInput').addEventListener('input', (e) => { current.title = e.target.value; markDirty(); });
+      $('bodyInput').addEventListener('input', (e) => { current.body = e.target.value; markDirty(); renderStats(); });
+      $('goalInput').addEventListener('input', (e) => { current.goal = Math.max(0, parseInt(e.target.value, 10) || 0); markDirty(); renderStats(); });
+      $('searchInput').addEventListener('input', renderList);
+
+      $('newBtn').addEventListener('click', () => {
+        flushSave();
+        const d = newDoc();
+        store.set(STORE_KEY, docs);
+        openDoc(d.id);
+        document.body.classList.remove('drawer');
+        $('titleInput').focus();
+      });
+
+      $('deleteBtn').addEventListener('click', () => {
+        const name = current.title.trim() || firstLine(current.body).slice(0, 20) || '無題';
+        if (!confirm(`「${name}」を削除しますか？\nこの操作は取り消せません。`)) return;
+        clearTimeout(saveTimer); saveTimer = null;
+        docs = docs.filter(d => d.id !== current.id);
+        if (docs.length === 0) newDoc();
+        store.set(STORE_KEY, docs);
+        current = docs.slice().sort((a, b) => b.updated - a.updated)[0];
+        openDoc(current.id);
+        toast('削除しました');
+      });
+
+      $('copyBtn').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(current.body); toast('本文をコピーしました'); }
+        catch {
+          const ta = $('bodyInput'); ta.focus(); ta.select();
+          try { document.execCommand('copy'); toast('本文をコピーしました'); } catch { toast('コピーできませんでした'); }
         }
       });
-      searchBtn.disabled = hasError;
-    }
 
-    function resetForm() {
-      const inputs = document.querySelectorAll('.id-input');
-      inputs.forEach(input => {
-        input.value = "";
-        input.classList.remove('error-field');
+      $('exportBtn').addEventListener('click', () => {
+        flushSave();
+        const name = (current.title.trim() || '無題').replace(/[\\/:*?"<>|]/g, '_');
+        const content = (current.title.trim() ? current.title.trim() + '\n\n' : '') + current.body;
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = name + '.txt';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       });
-      document.querySelectorAll('.dup-msg').forEach(m => m.style.display = 'none');
-      document.getElementById('searchBtn').disabled = false;
-      document.getElementById('result').innerHTML = "";
-      document.getElementById('result').style.display = 'none';
-      document.getElementById('error-box').innerHTML = "";
-      inputs[0].focus();
-    }
 
-    async function searchAll() {
-      const inputs = document.querySelectorAll('.id-input');
-      const resDiv = document.getElementById('result');
-      const errBox = document.getElementById('error-box');
-      const loadDiv = document.getElementById('loading');
+      $('verticalBtn').addEventListener('click', () => { prefs.vertical = !prefs.vertical; applyPrefs(); savePrefs(); });
+      $('serifBtn').addEventListener('click', () => { prefs.serif = !prefs.serif; applyPrefs(); savePrefs(); });
+      $('fontUp').addEventListener('click', () => { prefs.fontSize = Math.min(28, prefs.fontSize + 1); applyPrefs(); savePrefs(); });
+      $('fontDown').addEventListener('click', () => { prefs.fontSize = Math.max(12, prefs.fontSize - 1); applyPrefs(); savePrefs(); });
+      $('themeBtn').addEventListener('click', () => {
+        const dark = prefs.theme ? prefs.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        prefs.theme = dark ? 'light' : 'dark'; applyPrefs(); savePrefs();
+      });
+      $('focusBtn').addEventListener('click', () => {
+        const on = document.body.classList.toggle('focus');
+        $('focusBtn').classList.toggle('on', on);
+        if (on) { toast('集中モード（Esc で解除）'); $('bodyInput').focus(); }
+      });
+      $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
+      $('scrim').addEventListener('click', () => document.body.classList.remove('drawer'));
 
-      const idList = Array.from(inputs).map(i => i.value.trim()).filter(id => id !== "");
-      if (idList.length === 0) return;
+      $('titleInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('bodyInput').focus(); }
+      });
 
-      errBox.innerHTML = "";
-      resDiv.innerHTML = ""; 
-      resDiv.style.display = 'none';
-      loadDiv.style.display = 'block';
+      document.addEventListener('keydown', (e) => {
+        const mod = e.ctrlKey || e.metaKey;
+        if (e.key === 'Escape') {
+          document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on');
+        } else if (mod && e.key.toLowerCase() === 's') {
+          e.preventDefault(); if (flushSave(true)) toast('保存しました');
+        } else if (mod && e.altKey && e.key.toLowerCase() === 'n') {
+          e.preventDefault(); $('newBtn').click();
+        }
+      });
 
-      try {
-        const requests = idList.map(id => fetch(`${GAS_URL}?id=${encodeURIComponent(id)}`).then(r => r.json()));
-        const responses = await Promise.all(requests);
-
-        responses.forEach((result, index) => {
-          const searchedId = idList[index];
-
-          if (result.error) {
-            errBox.innerHTML += `<div class="error-msg">入力ID ${searchedId}: ${result.error}</div>`;
-          } else if (result.data) {
-            result.data.forEach(item => {
-              const card = document.createElement('div');
-              card.className = 'item-card';
-              card.innerHTML = `
-                <div class="id-section">
-                  <div class="id-badge">${item.kanri || '--'}</div>
-                  <div>
-                    <div class="input-id-label">入力ID</div>
-                    <div class="input-id-value">${searchedId}</div>
-                  </div>
-                </div>
-                <div><div class="item-label">商品名</div><div class="item-value">${item.name || '--'}</div></div>
-                <div><div class="item-label">サイズ</div><div class="item-value">${item.size || '--'}</div></div>
-                <div><div class="item-label">カラー</div><div class="item-value">${item.color || '--'}</div></div>
-                <div><div class="item-label">シリアル</div><div class="item-value">${item.serial || '--'}</div></div>
-              `;
-              resDiv.appendChild(card);
-            });
-          }
-        });
-
-        loadDiv.style.display = 'none';
-        resDiv.style.display = 'block';
-      } catch (e) {
-        loadDiv.style.display = 'none';
-        errBox.innerHTML = '<div class="error-msg">通信エラーが発生しました</div>';
-      }
-    }
+      // ---------- 起動 ----------
+      applyPrefs();
+      openDoc(current.id);
+      $('saveState').textContent = '保存済み';
+      if (!current.body) $('bodyInput').focus();
+    })();
   </script>
 </body>
 </html>
