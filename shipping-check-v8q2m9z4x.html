@@ -96,10 +96,9 @@
     .work:not(.open) .chapters, .work:not(.open) .work-actions { display: none; }
     .ch-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ch-no { color: var(--muted); font-size: 13px; width: 20px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-    .handle, .mv { display: none; color: var(--muted); padding: 2px 6px; font-size: 16px; }
-    .mv { color: var(--accent); }
+    .handle { display: none; color: var(--muted); padding: 2px 6px; font-size: 16px; }
     .handle { cursor: grab; touch-action: none; font-size: 18px; }
-    .tree.editing .handle, .tree.editing .mv, .detail.editing .handle, .detail.editing .mv { display: inline-block; }
+    .tree.editing .handle, .detail.editing .handle { display: inline-block; }
     .tree.editing .ch-row, .tree.editing .work-row { cursor: default; }
     .tree.editing .ch-row.active, .tree.editing .work-row.active { background: transparent; color: inherit; }
     .tree.editing .work-row.active .work-name { color: var(--ink-strong); }
@@ -110,9 +109,7 @@
     .work.dragging { box-shadow: var(--shadow); border-radius: 12px; position: relative; z-index: 5; transform: scale(1.02); }
     .placeholder { color: var(--muted) !important; font-weight: 400 !important; }
     .side-tools { display: flex; align-items: center; gap: 12px; padding: 4px 16px 12px 20px; }
-    .seg { flex: 1; display: flex; background: var(--fill); border-radius: 9px; padding: 2px; }
-    .seg button { flex: 1; padding: 6px 4px; font-size: 13px; border-radius: 7px; color: var(--ink); }
-    .seg button.on { background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,0.12); font-weight: 600; }
+    .side-note { flex: 1; font-size: 13px; color: var(--muted); }
     .section-label.with-btn { display: flex; justify-content: space-between; align-items: center; }
     .section-label .text-btn { font-size: 13px; padding: 0; }
     .section-note.warn { color: var(--danger); }
@@ -294,10 +291,7 @@
         <button class="add-btn" id="newWorkBtn">＋ 新規作品</button>
       </div>
       <div class="side-tools">
-        <div class="seg" id="orderSeg" role="group" aria-label="作品の並び順">
-          <button data-order="recent">最終編集順</button>
-          <button data-order="manual">手動</button>
-        </div>
+        <span class="side-note">最終編集順</span>
         <button class="chip" id="editBtn">編集</button>
       </div>
       <div class="tree" id="tree"></div>
@@ -519,8 +513,7 @@
       prefs: Object.assign({
         view: null,            // { type: 'chapter'|'detail', workId, chapterId }
         open: {},              // 展開中の作品
-        fontSize: 17, vertical: false, serif: false, theme: null, sidebar: true, preview: false,
-        workOrder: 'recent'    // 'recent'＝最終編集順 / 'manual'＝手動
+        fontSize: 17, vertical: false, serif: false, theme: null, sidebar: true, preview: false
       }, ls.get(PREF_KEY, {})),
       editing: false           // メニューの編集（並び替え）モード
     };
@@ -571,7 +564,7 @@
         work.updated = Date.now();
         // 最終編集順のときは編集した作品をメニューの一番上へ
         const top = $('tree').querySelector('.work');
-        if (state.prefs.workOrder !== 'manual' && top && top.dataset.id !== work.id && hasTitle(work)) setTimeout(renderTree, 0);
+        if (top && top.dataset.id !== work.id && hasTitle(work)) setTimeout(renderTree, 0);
       }
       dirty.add(work.id);
       setSaveState('未保存…');
@@ -719,7 +712,7 @@
       const editing = document.activeElement === bodyEl ? [bodyEl.selectionStart, bodyEl.selectionEnd, $('view').scrollTop] : null;
       if (!current().work) { const f = sortedWorks()[0]; state.prefs.view = f ? { type: 'detail', workId: f.id } : null; }
       if (state.prefs.view && state.prefs.view.type === 'chapter' && !current().chapter) state.prefs.view = { type: 'detail', workId: state.prefs.view.workId };
-      render();
+      render(true);
       if (editing && bodyEl && document.body.contains(bodyEl)) {
         bodyEl.focus(); bodyEl.setSelectionRange(editing[0], editing[1]); $('view').scrollTop = editing[2];
       }
@@ -783,8 +776,7 @@
       return c;
     }
     function createWork() {
-      const orders = state.works.map((x) => x.order).filter((o) => typeof o === 'number');
-      const w = { id: uid(), title: '', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now(), order: orders.length ? Math.min(...orders) - 1 : 0 };
+      const w = { id: uid(), title: '', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now() };
       state.works.push(w);
       state.prefs.open[w.id] = true;
       return w; // 作品名が入力されるまで保存しない
@@ -828,55 +820,8 @@
 
     // ===== 作品の並び順 =====
     function sortedWorks() {
-      const arr = state.works.slice();
-      if (state.prefs.workOrder === 'manual') {
-        arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (b.updated || 0) - (a.updated || 0));
-      } else {
-        arr.sort((a, b) => (b.updated || 0) - (a.updated || 0));
-      }
-      return arr;
-    }
-    function setWorkOrder(mode) {
-      if (state.prefs.workOrder === mode) return;
-      if (mode === 'manual') {
-        // 今の表示順をそのまま手動順の初期値にする（並び替えは編集扱いにしない）
-        sortedWorks().forEach((w, i) => { if (w.order !== i) { w.order = i; touch(w, { content: false }); } });
-      }
-      state.prefs.workOrder = mode;
-      savePrefs();
-      renderTree();
-    }
-    function moveWork(w, d) {
-      if (state.prefs.workOrder !== 'manual') setWorkOrder('manual');
-      const list = sortedWorks();
-      const i = list.indexOf(w), j = i + d;
-      if (j < 0 || j >= list.length) return;
-      list.splice(i, 1); list.splice(j, 0, w);
-      applyWorkOrder(list.map((x) => x.id));
-    }
-    function applyWorkOrder(ids) {
-      if (state.prefs.workOrder !== 'manual') setWorkOrder('manual');
-      const list = ids.map(getWork).filter(Boolean);
-      const i = list.findIndex((w, k) => sortedWorks()[k] !== w);
-      if (i < 0) { renderTree(); return; }
-      // 位置が変わった作品だけ、前後の間の値を振り直す
-      list.forEach((w, k) => {
-        const prev = list[k - 1], next = list[k + 1];
-        const okPrev = !prev || prev.order < w.order, okNext = !next || w.order < next.order;
-        if (okPrev && okNext) return;
-        const lo = prev ? prev.order : (next ? next.order - 2 : 0);
-        const hi = next && next.order > lo ? next.order : lo + 2;
-        w.order = (lo + hi) / 2;
-        touch(w, { content: false });
-      });
-      renderTree();
-    }
-    function moveChapter(w, i, d) {
-      const j = i + d;
-      if (j < 0 || j >= w.chapters.length) return;
-      const [c] = w.chapters.splice(i, 1);
-      w.chapters.splice(j, 0, c);
-      touch(w); renderTree(); renderMainLight();
+      // 最終編集が新しい作品ほど上に表示する
+      return state.works.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0));
     }
     function applyChapterOrder(w, ids) {
       const before = w.chapters.map((c) => c.id).join();
@@ -892,7 +837,6 @@
       tree.classList.toggle('editing', !!state.editing);
       $('editBtn').textContent = state.editing ? '完了' : '編集';
       $('editBtn').classList.toggle('on', !!state.editing);
-      document.querySelectorAll('#orderSeg button').forEach((b) => b.classList.toggle('on', b.dataset.order === (state.prefs.workOrder || 'recent')));
       const cur = current();
       const list = sortedWorks();
       if (!list.length) {
@@ -911,10 +855,7 @@
         },
           h('button', { class: 'twisty', 'aria-label': '開閉', onclick: (e) => { e.stopPropagation(); state.prefs.open[w.id] = !open; savePrefs(); renderTree(); } }, '▶'),
           h('span', { class: 'work-name' + (hasTitle(w) ? '' : ' placeholder'), title: w.title }, hasTitle(w) ? w.title : '（作品名を入力）'),
-          h('span', { class: 'mini' }, ratio(t.count, t.goal)),
-          h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); moveWork(w, -1); } }, '↑'),
-          h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); moveWork(w, 1); } }, '↓'),
-          h('button', { class: 'handle', 'aria-label': 'ドラッグで作品を並び替え', onpointerdown: (e) => startDrag(e, workEl, tree, (ids) => applyWorkOrder(ids)) }, '≡')
+          h('span', { class: 'mini' }, ratio(t.count, t.goal))
         ));
         if (t.goal && t.count >= t.goal) card.querySelector('.work-row .mini').classList.add('done');
         const ul = h('ul', { class: 'chapters' });
@@ -928,8 +869,6 @@
             h('span', { class: 'ch-no' }, i + 1),
             h('span', { class: 'ch-name' + (hasTitle(c) ? '' : ' placeholder') }, hasTitle(c) ? c.title : '（サブタイトルを入力）'),
             h('span', { class: 'mini' + (done ? ' done' : '') }, ratio(chCount(c), c.goal || 0)),
-            h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); moveChapter(w, i, -1); } }, '↑'),
-            h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); moveChapter(w, i, 1); } }, '↓'),
             h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, li, ul, (ids) => applyChapterOrder(w, ids)) }, '≡')
           );
           ul.append(li);
@@ -1000,21 +939,24 @@
       }
     }
     // 並び替えなどで番号だけ変わったときの軽い更新
-    function renderMainLight() { renderCrumb(); renderCounts(); if (current().type === 'detail') renderView(); }
+    function renderMainLight() { renderCrumb(); renderCounts(); if (current().type === 'detail') renderView(true); }
 
     // ===== メイン表示 =====
-    function render() {
+    function render(keepScroll) {
       applyPrefs();
       renderTree();
       renderCrumb();
       renderCounts();
-      renderView();
+      renderView(keepScroll);
     }
-    function renderView() {
+    // keepScroll: 同じ画面の描き直しではスクロール位置を保つ
+    function renderView(keepScroll) {
       const view = $('view');
+      const top = keepScroll ? view.scrollTop : 0;
       view.innerHTML = '';
       view.classList.remove('grouped');
       view.scrollTop = 0;
+      requestAnimationFrame(() => { if (keepScroll) view.scrollTop = top; });
       const cur = current();
       $('toolbar').hidden = cur.type !== 'chapter';
       if (!cur.work) {
@@ -1094,7 +1036,7 @@
       work.chapters.splice(work.chapters.indexOf(ch), 1);
       touch(work);
       if (!work.chapters.length) detailEditing = false;
-      render();
+      render(true);
       toast('削除しました');
     }
 
@@ -1202,8 +1144,6 @@
           h('td', { class: 'num' }, fmt(chCount(c))),
           h('td', {}, detailEditing
             ? h('span', { class: 'row-tools' },
-                h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); moveChapter(work, i, -1); } }, '↑'),
-                h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); moveChapter(work, i, 1); } }, '↓'),
                 h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, tr, tbody, (ids) => applyChapterOrder(work, ids)) }, '≡'))
             : goalIn));
         tbody.append(tr);
@@ -1221,16 +1161,15 @@
       view.append(h('div', { class: 'detail' + (detailEditing ? ' editing' : '') },
         h('div', { class: 'cover-wrap' },
           coverBox,
-          h('div', { class: 'cover-actions' },
-            h('button', { class: 'text-btn', onclick: () => $('coverFile').click() }, work.cover ? '表紙を変更' : '表紙を追加'),
-            work.cover ? h('button', { class: 'text-btn danger', onclick: () => { if (confirm('表紙画像を削除しますか？')) { work.cover = ''; touch(work); renderView(); } } }, '削除') : null)),
+          work.cover ? h('div', { class: 'cover-actions' },
+            h('button', { class: 'text-btn danger', onclick: () => { if (confirm('表紙画像を削除しますか？')) { work.cover = ''; touch(work); renderView(true); } } }, '表紙を削除')) : null),
         h('div', { class: 'section-label' }, '作品名'),
         h('div', { class: 'group' }, titleIn),
         note,
         h('div', { class: 'section-label' }, 'あらすじ'),
         h('div', { class: 'group' }, syn),
         h('div', { class: 'section-label with-btn' }, h('span', {}, 'サブタイトルと目標文字数'),
-          work.chapters.length ? h('button', { class: 'text-btn', onclick: () => { detailEditing = !detailEditing; renderView(); } }, detailEditing ? '完了' : '並び替え・削除') : null),
+          work.chapters.length ? h('button', { class: 'text-btn', onclick: () => { detailEditing = !detailEditing; renderView(true); } }, detailEditing ? '完了' : '並び替え・削除') : null),
         h('div', { class: 'group' },
           h('table', { class: 'goals' },
             h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, detailEditing ? '並び替え' : '目標'))),
@@ -1266,7 +1205,7 @@
       try {
         work.cover = await resizeImage(file, 900);
         touch(work); await flush();
-        renderView();
+        renderView(true);
       } catch { toast('画像を読み込めませんでした'); }
     });
     function resizeImage(file, max) {
@@ -1319,7 +1258,6 @@
       setTimeout(() => { const t = document.querySelector('.work-title-input'); if (t) t.focus(); }, 0);
     });
     $('editBtn').addEventListener('click', () => { state.editing = !state.editing; renderTree(); });
-    document.querySelectorAll('#orderSeg button').forEach((b) => b.addEventListener('click', () => setWorkOrder(b.dataset.order)));
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on'); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush().then(() => sync()); }
