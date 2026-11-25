@@ -321,6 +321,10 @@
     /* 診断表示（「最終編集順」を3回タップで表示） */
     #diag { position: fixed; left: 8px; bottom: 8px; z-index: 200; background: rgba(0,0,0,0.78); color: #fff; font: 11px/1.45 ui-monospace, Menlo, monospace; padding: 8px 10px; border-radius: 8px; white-space: pre; pointer-events: none; }
     #safeProbe { position: fixed; top: 0; left: 0; width: 0; height: 0; visibility: hidden; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+    /* 本文入力中：入力欄を画面の下端まで広げ、欄の中でスクロール。最後の行も画面中ほどまで送れるよう下に余白 */
+    .editor.fill { height: 100%; min-height: 0; padding-bottom: 0; }
+    .editor.fill .body-input { flex: 1; min-height: 0; height: auto; overflow-y: auto; padding-bottom: 40vh; }
+    body.vertical .editor.fill .body-input { padding-bottom: 0; }
   </style>
 </head>
 <body>
@@ -398,7 +402,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-2'; // 公開のたびに更新する（新しい版の自動切り替えに使う）
+    const APP_VERSION = '2026.11.25-3'; // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
     const TABLE = 'novel_works';
@@ -1093,7 +1097,7 @@
       };
       lockBody();
       const preview = h('div', { class: 'preview' });
-      const ed = h('div', { class: 'editor' },
+      const ed = h('div', { class: 'editor' + (state.prefs.preview ? '' : ' fill') },
         state.prefs.preview ? preview : bodyEl
       );
       if (state.prefs.preview) renderPreview(preview, ch.body);
