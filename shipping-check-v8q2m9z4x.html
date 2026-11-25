@@ -1355,6 +1355,8 @@
     };
     const isIOSStandalone = () => (navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches))
       && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+    const isLandscape = () => (window.matchMedia ? matchMedia('(orientation: landscape)').matches : window.innerWidth > window.innerHeight);
+    const vhKey = () => 'noverun:vh:' + (isLandscape() ? 'L' : 'P') + ':' + Math.round(window.innerWidth);
     function fitViewport() {
       const vv = window.visualViewport;
       const app = $('app');
@@ -1365,7 +1367,7 @@
       // 同じ向き・同じ幅で一度でも見えた正しい高さを覚えておき、短い値が来たらそれを使う
       if (isIOSStandalone()) {
         const land = window.matchMedia ? matchMedia('(orientation: landscape)').matches : window.innerWidth > window.innerHeight;
-        const key = 'noverun:vh:' + (land ? 'L' : 'P') + ':' + Math.round(window.innerWidth);
+        const key = vhKey();
         const known = ls.get(key, 0);
         if (keyboard) {
           keyboard = !known || known - h > 150; // 本当にキーボードが開いているか
@@ -1394,10 +1396,42 @@
       vpTimer = setTimeout(() => { vpMeta.setAttribute('content', vpOrig); fitSoon(); }, 80);
     }
     let lastLand = window.matchMedia ? matchMedia('(orientation: landscape)').matches : false;
-    function onOrientation() {
-      [150, 700].forEach((t) => setTimeout(refreshViewport, t));
-      fitSoon();
+    // 表示枠が小さいまま（過去に見えた高さより短い）なら、iOS に枠を計算し直させる操作を
+    // 正しい大きさに戻るまで順番に繰り返す
+    const repairStat = { tries: 0, last: '-', result: '-' };
+    const repairTricks = [
+      ['meta', () => { vpMeta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1'); setTimeout(() => vpMeta.setAttribute('content', vpOrig), 80); }],
+      ['meta2', () => { vpMeta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover'); setTimeout(() => vpMeta.setAttribute('content', vpOrig), 120); }],
+      ['height', () => { const el = document.documentElement; el.style.height = '100.5%'; void el.offsetHeight; requestAnimationFrame(() => { el.style.height = ''; }); }],
+      ['scroll', () => { document.body.style.position = 'static'; window.scrollTo(0, 1); requestAnimationFrame(() => { window.scrollTo(0, 0); document.body.style.position = ''; }); }],
+      ['reflow', () => { const app = $('app'); app.style.visibility = 'hidden'; void app.offsetHeight; requestAnimationFrame(() => { app.style.visibility = ''; }); }]
+    ];
+    let repairTimer = null;
+    function needsRepair() {
+      if (!isIOSStandalone() || isTyping()) return false;
+      const known = ls.get(vhKey(), 0);
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      return known > 0 && known - h > 20 && known - h <= 200;
     }
+    function startRepair() {
+      clearTimeout(repairTimer);
+      let n = 0;
+      const step = () => {
+        fitViewport();
+        if (!needsRepair()) { if (n) repairStat.result = '成功(' + n + '回目)'; return; }
+        if (n >= 15) { repairStat.result = '失敗'; return; }
+        const [name, fn] = repairTricks[n % repairTricks.length];
+        n++; repairStat.tries++; repairStat.last = name;
+        try { fn(); } catch {}
+        repairTimer = setTimeout(step, 450);
+      };
+      repairTimer = setTimeout(step, 350);
+    }
+    function onOrientation() {
+      fitSoon();
+      startRepair();
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) startRepair(); });
     if (window.matchMedia) {
       const mq = matchMedia('(orientation: landscape)');
       const onMq = () => { if (mq.matches !== lastLand) { lastLand = mq.matches; onOrientation(); } };
@@ -1424,7 +1458,8 @@
         'vv         ' + r(vv.width) + ' x ' + r(vv.height) + ' top ' + r(vv.offsetTop || 0),
         'app        ' + r(a.width) + ' x ' + r(a.height) + ' @ ' + r(a.top) + ' (style ' + $('app').style.height + ')',
         'safe t/r/b/l ' + [pr.paddingTop, pr.paddingRight, pr.paddingBottom, pr.paddingLeft].map((x) => parseInt(x, 10)).join('/'),
-        'scroll     ' + scrollX + ',' + scrollY + '  typing ' + isTyping()
+        'scroll     ' + scrollX + ',' + scrollY + '  typing ' + isTyping(),
+        'known      ' + ls.get(vhKey(), 0) + '  repair ' + repairStat.tries + ' / ' + repairStat.last + ' / ' + repairStat.result
       ].join('\n');
     }
     function toggleDiag() {
