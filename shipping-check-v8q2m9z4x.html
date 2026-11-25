@@ -149,13 +149,10 @@
     .chip { color: var(--accent); font-size: 15px; padding: 4px 6px; }
     .chip.on { font-weight: 600; }
     .empty-tree { color: var(--muted); font-size: 15px; text-align: center; padding: 40px 10px; line-height: 1.8; }
-    .account { border-top: 0.5px solid var(--line); padding: 10px 16px 0 20px; display: flex; align-items: center; gap: 8px; }
-    .account-btns { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-    .account-info { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; color: var(--muted); line-height: 1.5; }
-    .account-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #accountEmail { color: var(--ink); font-size: 13px; }
-    .account + .side-foot { border-top: none; }
-    .side-foot { border-top: 0.5px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 14px; }
+    .side-foot { border-top: 0.5px solid var(--line); padding: 8px 16px calc(8px + env(safe-area-inset-bottom)) 20px; display: flex; flex-direction: column; gap: 4px; }
+    .foot-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 32px; }
+    .foot-row .chip { padding: 4px 0; }
+    .sync-state { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ---------- メイン ---------- */
     .main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
@@ -379,15 +376,16 @@
         <button class="chip" id="editBtn">編集</button>
       </div>
       <div class="tree" id="tree"></div>
-      <div class="account">
-        <div class="account-info"><span id="accountEmail"></span><span id="syncState"></span></div>
-        <div class="account-btns">
-          <button class="chip" id="syncBtn" title="今すぐ同期">同期</button>
-          <button class="chip" id="backupBtn" title="全作品をファイルに保存">バックアップ</button>
-        </div>
-      </div>
+      <!-- 1段目：同期状況・同期ボタン／2段目：バックアップ・ログアウト -->
       <div class="side-foot">
-        <button class="chip" id="logoutBtn" style="color:var(--danger)">ログアウト</button>
+        <div class="foot-row">
+          <span class="sync-state" id="syncState"></span>
+          <button class="chip" id="syncBtn" title="今すぐ同期">同期</button>
+        </div>
+        <div class="foot-row">
+          <button class="chip" id="backupBtn" title="全作品をファイルに保存">バックアップ</button>
+          <button class="chip" id="logoutBtn" style="color:var(--danger)">ログアウト</button>
+        </div>
       </div>
     </aside>
     <div class="scrim" id="scrim"></div>
@@ -432,7 +430,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-9';
+    const APP_VERSION = '2026.11.25-10';
     if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
@@ -1661,7 +1659,6 @@
     // ===== 起動 =====
     // ===== アカウント =====
     function renderAccount() {
-      $('accountEmail').textContent = (Cloud.session && Cloud.session.email) || '';
       showCloudState();
     }
     async function clearLocalData() {
