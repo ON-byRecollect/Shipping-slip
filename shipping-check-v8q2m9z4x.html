@@ -250,7 +250,8 @@
     body.focus .editor { padding-top: 28px; }
 
     /* アラート（iOS 風） */
-    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; animation: fade 0.15s; }
+    /* キーボードを除いた「見えている範囲」に合わせて表示（--vv-* は JS で更新） */
+    .modal-bg { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vv-h, 100%); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; animation: fade 0.15s; }
     .modal { width: 290px; background: var(--panel); box-shadow: var(--shadow); border-radius: 14px; overflow: hidden; text-align: center; animation: pop 0.2s cubic-bezier(.2,.9,.3,1.2); }
     .modal-body { padding: 20px 16px 16px; }
     .modal h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; color: var(--ink-strong); }
@@ -867,8 +868,9 @@
         const c = newChapter(w);
         c.title = name;
         touch(w);
-        navigate({ type: 'chapter', workId: w.id, chapterId: c.id });
-        setTimeout(() => { bodyEl && bodyEl.focus(); }, 0);
+        state.prefs.open[w.id] = true;
+        render(true); // 画面は移動せず、今のページのまま一覧に追加する
+        toast(`「${name}」を追加しました`);
       });
     }
     // 1行入力のダイアログ（iOS のアラート風）。空欄では確定できない
@@ -1379,6 +1381,10 @@
       }
       const top = vv && keyboard ? vv.offsetTop : 0;
       app.style.height = Math.round(h) + 'px';
+      // ダイアログ用：キーボードを除いた実際に見えている範囲
+      const root = document.documentElement.style;
+      root.setProperty('--vv-h', Math.round(vv ? vv.height : window.innerHeight) + 'px');
+      root.setProperty('--vv-top', Math.round(vv ? vv.offsetTop : 0) + 'px');
       app.style.top = Math.round(top) + 'px';
     }
     function fitSoon() { [0, 100, 300, 600, 1000].forEach((t) => setTimeout(fitViewport, t)); }
