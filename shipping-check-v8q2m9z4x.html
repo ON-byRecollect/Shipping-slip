@@ -104,6 +104,15 @@
     .chapters { list-style: none; margin: 0; padding: 0; }
     .work:not(.open) .chapters, .work:not(.open) .work-actions { display: none; }
     .ch-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* 執筆完了チェック（iOS 風の丸いチェックボックス） */
+    .ch-check { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--muted2); display: inline-flex; align-items: center; justify-content: center; padding: 0; position: relative; }
+    .ch-check::after { content: ''; position: absolute; inset: -10px; } /* タップしやすく */
+    .ch-check-mark { font-size: 13px; font-weight: 700; color: #fff; opacity: 0; line-height: 1; }
+    .ch-check.on { background: var(--ok); border-color: var(--ok); }
+    .ch-check.on .ch-check-mark { opacity: 1; }
+    .ch-row.active .ch-check { border-color: rgba(255,255,255,0.8); }
+    .ch-row.active .ch-check.on { background: #fff; border-color: #fff; }
+    .ch-row.active .ch-check.on .ch-check-mark { color: var(--accent); }
     .ch-no { color: var(--muted); font-size: 13px; width: 20px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
     .handle { display: none; color: var(--muted); padding: 2px 6px; font-size: 16px; }
     .handle { cursor: grab; touch-action: none; font-size: 18px; }
@@ -329,6 +338,17 @@
        Apple 端末ではヒラギノを名前で指定し、細め（W3相当）の太さにする */
     .body-input, .preview { font-weight: 400; }
     html.apple .body-input, html.apple .preview { font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif; font-weight: 300; }
+    /* マーカー：入力欄の下に同じ文字組みの層を重ねて印を表示 */
+    .body-wrap { position: relative; flex: 1; min-height: 0; display: flex; }
+    .body-wrap .body-input { position: relative; z-index: 1; background: transparent; }
+    .body-mirror { position: absolute !important; inset: 0; z-index: 0 !important; overflow: hidden !important; color: transparent; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; pointer-events: none; -webkit-user-select: none; user-select: none; }
+    .body-input { white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; }
+    .body-mirror mark, .preview mark { background: rgba(255, 214, 0, 0.45); color: inherit; border-radius: 2px; }
+    .body-mirror mark { color: transparent; }
+    @media (prefers-color-scheme: dark) { .body-mirror mark, .preview mark { background: rgba(255, 214, 10, 0.32); } }
+    .mark-swatch { background: linear-gradient(transparent 55%, rgba(255, 214, 0, 0.6) 55%); padding: 0 2px; }
+    body.vertical .body-wrap { height: 100%; }
+    body.vertical .body-mirror { writing-mode: vertical-rl; text-orientation: mixed; }
   </style>
 </head>
 <body>
@@ -385,6 +405,7 @@
         <button class="tool" id="focusBtn" title="集中モード（Escで解除）">集中</button>
         <span class="sep"></span>
         <button class="tool" id="rubyBtn" title="選択した文字にルビを振る">ルビ</button>
+        <button class="tool" id="markBtn" title="選択した文字に黄色いマーカー（もう一度で解除）"><span class="mark-swatch">マーカー</span></button>
         <button class="tool ins" data-ins="……" title="三点リーダー（2つ）">……</button>
         <button class="tool ins" data-ins="――" title="ダッシュ（2つ）">――</button>
         <button class="tool ins" data-ins="　" title="全角スペース（字下げ）">字下</button>
@@ -406,7 +427,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-4';
+    const APP_VERSION = '2026.11.25-5';
     if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
@@ -958,7 +979,11 @@
             'data-id': c.id,
             onclick: () => { if (!state.editing) navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); }
           },
-            h('span', { class: 'ch-no' }, i + 1),
+            h('button', {
+              class: 'ch-check' + (c.done ? ' on' : ''), role: 'checkbox', 'aria-checked': c.done ? 'true' : 'false',
+              'aria-label': c.done ? '執筆完了（タップで執筆中に戻す）' : '執筆中（タップで執筆完了にする）',
+              onclick: (e) => { e.stopPropagation(); c.done = !c.done; touch(w, { content: false }); renderTree(); }
+            }, h('span', { class: 'ch-check-mark' }, '✓')),
             state.editing ? renameInput(w, c, 'サブタイトル（必須）', 'chapter') : h('span', { class: 'ch-name' + (hasTitle(c) ? '' : ' placeholder') }, hasTitle(c) ? c.title : '（サブタイトルを入力）'),
             h('span', { class: 'mini' + (done ? ' done' : '') }, ratio(chCount(c), c.goal || 0)),
             h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, li, ul, (ids) => applyChapterOrder(w, ids)) }, '≡')
@@ -1102,18 +1127,93 @@
       };
       lockBody();
       const preview = h('div', { class: 'preview' });
+      // マーカー表示用：入力欄の真下に同じ文字組みの層を重ね、印の部分だけ黄色く塗る
+      markEl = h('div', { class: 'body-input body-mirror', 'aria-hidden': 'true' });
+      bodyEl.addEventListener('scroll', () => { markEl.scrollTop = bodyEl.scrollTop; markEl.scrollLeft = bodyEl.scrollLeft; });
+      bodyPrev = bodyEl.value;
       const ed = h('div', { class: 'editor' + (state.prefs.preview ? '' : ' fill') },
-        state.prefs.preview ? preview : bodyEl
+        state.prefs.preview ? preview : h('div', { class: 'body-wrap' }, markEl, bodyEl)
       );
-      if (state.prefs.preview) renderPreview(preview, ch.body);
+      if (state.prefs.preview) renderPreview(preview, ch.body, ch.marks);
+      else renderMarks(ch);
       view.append(ed);
       if (state.prefs.vertical) view.scrollLeft = view.scrollWidth;
     }
-    function renderPreview(el, text) {
-      el.innerHTML = text.split('\n').map((line) => `<p>${line ? renderRubyHTML(line) : '<br>'}</p>`).join('');
+    function renderPreview(el, text, marks) {
+      // マーカー位置に目印の文字を差し込んでから変換し、最後に <mark> へ置き換える
+      const MS = '\uE000', ME = '\uE001';
+      let t = text;
+      [...(marks || [])].sort((a, b) => b[0] - a[0]).forEach(([a, b]) => { t = t.slice(0, b) + ME + t.slice(b); t = t.slice(0, a) + MS + t.slice(a); });
+      el.innerHTML = t.split('\n').map((line) => {
+        const plain = line.replace(/[\uE000\uE001]/g, '');
+        return `<p>${plain ? renderRubyHTML(line).replace(/\uE000/g, '<mark>').replace(/\uE001/g, '</mark>') : '<br>'}</p>`;
+      }).join('');
+    }
+
+    // ===== マーカー（本文の任意の範囲に黄色い印。印は本文とは別に [開始, 終了] で保存） =====
+    let markEl = null, bodyPrev = '';
+    function renderMarks(ch) {
+      if (!markEl) return;
+      const text = ch.body || '';
+      const marks = (ch.marks || []).filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+      let html = '', pos = 0;
+      for (const [a, b] of marks) {
+        html += esc(text.slice(pos, a)) + '<mark>' + esc(text.slice(a, b)) + '</mark>';
+        pos = b;
+      }
+      html += esc(text.slice(pos)) + '\u200b'; // 末尾の改行を反映させるため
+      markEl.innerHTML = html;
+      markEl.scrollTop = bodyEl.scrollTop; markEl.scrollLeft = bodyEl.scrollLeft;
+    }
+    // 入力で文字がずれた分だけ印の位置もずらす
+    function shiftMarks(ch, oldText, newText) {
+      if (!ch.marks || !ch.marks.length || oldText === newText) return;
+      let p = 0;
+      const max = Math.min(oldText.length, newText.length);
+      while (p < max && oldText[p] === newText[p]) p++;
+      let sfx = 0;
+      while (sfx < max - p && oldText[oldText.length - 1 - sfx] === newText[newText.length - 1 - sfx]) sfx++;
+      const oldEnd = oldText.length - sfx, newEnd = newText.length - sfx, delta = newText.length - oldText.length;
+      ch.marks = ch.marks.map(([a, b]) => [
+        a < p ? a : (a >= oldEnd ? a + delta : p),
+        b <= p ? b : (b >= oldEnd ? b + delta : newEnd)
+      ]).filter(([a, b]) => b > a);
+    }
+    function toggleMark(ch, start, end) {
+      let marks = (ch.marks || []).slice();
+      if (start === end) {
+        // 選択なし：カーソルのある印を消す
+        const before = marks.length;
+        marks = marks.filter(([a, b]) => !(start >= a && start <= b));
+        if (marks.length === before) return '消す印がありません（文字を選んでから押してください）';
+        ch.marks = marks; return '印を消しました';
+      }
+      const covered = marks.some(([a, b]) => a <= start && b >= end);
+      if (covered) {
+        // 選択範囲を印から取り除く
+        const out = [];
+        for (const [a, b] of marks) {
+          if (b <= start || a >= end) { out.push([a, b]); continue; }
+          if (a < start) out.push([a, start]);
+          if (b > end) out.push([end, b]);
+        }
+        ch.marks = out; return '印を消しました';
+      }
+      // 印を付ける（重なる印とはまとめる）
+      let a0 = start, b0 = end;
+      const out = [];
+      for (const [a, b] of marks) {
+        if (b < a0 || a > b0) out.push([a, b]);
+        else { a0 = Math.min(a0, a); b0 = Math.max(b0, b); }
+      }
+      out.push([a0, b0]);
+      ch.marks = out.sort((x, y) => x[0] - y[0]); return null;
     }
     function onBodyInput(work, ch) {
+      shiftMarks(ch, bodyPrev, bodyEl.value);
+      bodyPrev = bodyEl.value;
       ch.body = bodyEl.value;
+      renderMarks(ch);
       ch._count = countText(ch.body);
       ch.updated = Date.now();
       touch(work);
@@ -1166,6 +1266,19 @@
     document.querySelectorAll('[data-ins]').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.preventDefault()); // キーボードを閉じない
       b.addEventListener('click', () => { ensureEditMode(); insertText(b.dataset.ins); });
+    });
+    $('markBtn').addEventListener('pointerdown', (e) => e.preventDefault()); // 選択を保ったまま押せるように
+    $('markBtn').addEventListener('click', () => {
+      ensureEditMode();
+      const { work, chapter } = current();
+      if (!bodyEl || !chapter || bodyEl.disabled) return;
+      const s0 = bodyEl.selectionStart, e0 = bodyEl.selectionEnd;
+      const msg = toggleMark(chapter, Math.min(s0, e0), Math.max(s0, e0));
+      if (msg) toast(msg);
+      renderMarks(chapter);
+      touch(work);
+      bodyEl.focus();
+      bodyEl.setSelectionRange(e0, e0);
     });
     $('rubyBtn').addEventListener('pointerdown', (e) => e.preventDefault());
     $('rubyBtn').addEventListener('click', () => {
