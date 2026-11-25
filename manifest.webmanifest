@@ -4,9 +4,9 @@
   "start_url": "./shipping-check-v8q2m9z4x.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f2f2f7",
+  "background_color": "#ffffff",
   "theme_color": "#f2f2f7",
   "icons": [
-    { "src": "noverun-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "noverun-icon-v2.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
