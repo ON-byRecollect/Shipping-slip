@@ -398,6 +398,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
+    const APP_VERSION = '2026.11.25-2'; // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
     const TABLE = 'novel_works';
@@ -1586,6 +1587,25 @@
       renderAccount();
       sync();
     }
+
+    // ===== 新しい版の自動切り替え =====
+    // ホーム画面アプリは古いページを使い続けることがあるため、公開中の版を確認して違えば読み込み直す
+    let updating = false;
+    async function checkUpdate() {
+      if (updating || !navigator.onLine) return;
+      try {
+        const r = await fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+        if (!m || m[1] === APP_VERSION) return;
+        if (isTyping()) { setTimeout(checkUpdate, 30000); return; } // 入力中は後回し
+        updating = true;
+        await flush();
+        location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); // URL を変えてキャッシュを避ける
+      } catch {}
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+    setTimeout(checkUpdate, 1500);
 
     if (Cloud.session) start(); else showLogin(false);
   })();
