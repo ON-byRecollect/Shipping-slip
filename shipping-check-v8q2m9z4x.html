@@ -17,9 +17,6 @@
   <link rel="apple-touch-icon" href="noverun-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
     /* iOS システムカラー */
@@ -181,7 +178,6 @@
     .ch-title::placeholder, .body-input::placeholder { color: var(--muted2); }
     .preview p { margin: 0; min-height: 1em; }
     .preview rt { font-size: 0.5em; color: var(--muted); }
-    body.serif .body-input, body.serif .preview, body.serif .ch-title { font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif; }
     .ch-foot { margin-top: 40px; display: flex; justify-content: center; }
     .danger-link { color: var(--danger); font-size: 15px; padding: 8px; }
 
@@ -228,9 +224,10 @@
     .btn-primary { background: var(--accent); color: #fff; border-radius: 12px; padding: 13px 22px; font-weight: 600; font-size: 17px; }
 
     /* 集中モード */
-    body.focus .sidebar { display: none; }
-    body.focus .toolbar { opacity: 0.25; transition: opacity 0.2s; }
-    body.focus .toolbar:hover, body.focus .toolbar:focus-within { opacity: 1; }
+    /* 集中モード：メニュー・サブタイトル・文字数カウントを隠して本文だけにする */
+    body.focus .sidebar, body.focus .topbar, body.focus .ch-head { display: none !important; }
+    body.focus .toolbar { padding-top: calc(4px + env(safe-area-inset-top)); }
+    body.focus .editor { padding-top: 28px; }
 
     /* アラート（iOS 風） */
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; animation: fade 0.15s; }
@@ -331,6 +328,7 @@
       <div class="toolbar" id="toolbar">
         <button class="tool" id="verticalBtn" title="縦書き / 横書き">縦書き</button>
         <button class="tool" id="previewBtn" title="ルビを表示して確認">プレビュー</button>
+        <button class="tool" id="focusBtn" title="集中モード（Escで解除）">集中</button>
         <span class="sep"></span>
         <button class="tool" id="rubyBtn" title="選択した文字にルビを振る">ルビ</button>
         <button class="tool ins" data-ins="……" title="三点リーダー（2つ）">……</button>
@@ -339,9 +337,6 @@
         <span class="sep"></span>
         <button class="tool" id="fontDown" title="文字を小さく">A−</button>
         <button class="tool" id="fontUp" title="文字を大きく">A＋</button>
-        <button class="tool" id="serifBtn" title="明朝 / ゴシック">明朝</button>
-        <button class="tool" id="themeBtn" title="ダーク / ライト">明暗</button>
-        <button class="tool" id="focusBtn" title="集中モード（Escで解除）">集中</button>
         <span class="save-state" id="saveState">保存済み</span>
       </div>
 
@@ -1301,30 +1296,22 @@
       const p = state.prefs;
       document.documentElement.style.setProperty('--fs', p.fontSize + 'px');
       document.body.classList.toggle('vertical', !!p.vertical);
-      document.body.classList.toggle('serif', !!p.serif);
       document.body.classList.toggle('no-sidebar', !p.sidebar);
       $('verticalBtn').classList.toggle('on', !!p.vertical);
       $('verticalBtn').textContent = p.vertical ? '横書き' : '縦書き';
       $('previewBtn').classList.toggle('on', !!p.preview);
-      $('serifBtn').classList.toggle('on', !!p.serif);
-      if (p.theme) document.documentElement.setAttribute('data-theme', p.theme);
-      else document.documentElement.removeAttribute('data-theme');
+      document.documentElement.removeAttribute('data-theme'); // 端末のライト／ダーク設定に従う
     }
     const toggle = (key, rerender) => () => { state.prefs[key] = !state.prefs[key]; savePrefs(); applyPrefs(); if (rerender) { flush(); renderView(); } };
     $('verticalBtn').addEventListener('click', toggle('vertical', true));
     $('previewBtn').addEventListener('click', toggle('preview', true));
-    $('serifBtn').addEventListener('click', toggle('serif'));
     $('sideToggle').addEventListener('click', toggle('sidebar'));
     $('fontUp').addEventListener('click', () => { state.prefs.fontSize = Math.min(30, state.prefs.fontSize + 1); savePrefs(); applyPrefs(); });
     $('fontDown').addEventListener('click', () => { state.prefs.fontSize = Math.max(12, state.prefs.fontSize - 1); savePrefs(); applyPrefs(); });
-    $('themeBtn').addEventListener('click', () => {
-      const dark = state.prefs.theme ? state.prefs.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-      state.prefs.theme = dark ? 'light' : 'dark'; savePrefs(); applyPrefs();
-    });
     $('focusBtn').addEventListener('click', () => {
       const on = document.body.classList.toggle('focus');
       $('focusBtn').classList.toggle('on', on);
-      if (on) toast('集中モード（Escで解除）');
+      if (on) toast('集中モード（もう一度「集中」で解除）');
     });
     $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
     $('scrim').addEventListener('click', () => document.body.classList.remove('drawer'));
