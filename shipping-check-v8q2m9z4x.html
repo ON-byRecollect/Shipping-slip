@@ -413,7 +413,6 @@
         <button class="tool" id="markBtn" title="選択した文字に黄色いマーカー（もう一度で解除）"><span class="mark-swatch">マーカー</span></button>
         <button class="tool ins" data-ins="……" title="三点リーダー（2つ）">……</button>
         <button class="tool ins" data-ins="――" title="ダッシュ（2つ）">――</button>
-        <button class="tool ins" data-ins="　" title="全角スペース（字下げ）">字下</button>
         <span class="sep"></span>
         <button class="tool" id="fontDown" title="文字を小さく">A−</button>
         <button class="tool" id="fontUp" title="文字を大きく">A＋</button>
@@ -433,7 +432,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-6';
+    const APP_VERSION = '2026.11.25-7';
     if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
@@ -1150,9 +1149,17 @@
       const MS = '\uE000', ME = '\uE001';
       let t = text;
       [...(marks || [])].sort((a, b) => b[0] - a[0]).forEach(([a, b]) => { t = t.slice(0, b) + ME + t.slice(b); t = t.slice(0, a) + MS + t.slice(a); });
+      // 段落（改行）をまたぐ印は、各段落の中で閉じて次の段落で開き直す
+      let open = false;
       el.innerHTML = t.split('\n').map((line) => {
         const plain = line.replace(/[\uE000\uE001]/g, '');
-        return `<p>${plain ? renderRubyHTML(line).replace(/\uE000/g, '<mark>').replace(/\uE001/g, '</mark>') : '<br>'}</p>`;
+        const startOpen = open;
+        for (const ch of line) { if (ch === MS) open = true; else if (ch === ME) open = false; }
+        if (!plain) return '<p><br></p>';
+        let html = renderRubyHTML(line).replace(/\uE000/g, '<mark>').replace(/\uE001/g, '</mark>');
+        if (startOpen) html = '<mark>' + html;
+        if (open) html += '</mark>';
+        return `<p>${html}</p>`;
       }).join('');
     }
 
@@ -1280,6 +1287,8 @@
       b.addEventListener('click', () => { ensureEditMode(); insertText(b.dataset.ins); });
     });
     $('markBtn').addEventListener('pointerdown', (e) => e.preventDefault()); // 選択を保ったまま押せるように
+    // ツールバーのボタンは押しても入力欄のフォーカスを外さない（キーボードが閉じて画面が動き、タップが空振りするのを防ぐ）
+    ['focusBtn', 'verticalBtn', 'previewBtn', 'fontUp', 'fontDown'].forEach((id) => $(id).addEventListener('pointerdown', (e) => e.preventDefault()));
     $('markBtn').addEventListener('click', () => {
       ensureEditMode();
       const { work, chapter } = current();
