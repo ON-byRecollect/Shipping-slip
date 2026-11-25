@@ -376,13 +376,10 @@
         <button class="chip" id="editBtn">編集</button>
       </div>
       <div class="tree" id="tree"></div>
-      <!-- 1段目：同期状況・同期ボタン／2段目：バックアップ・ログアウト -->
+      <!-- 同期・バックアップ・ログアウトを1列に -->
       <div class="side-foot">
         <div class="foot-row">
-          <span class="sync-state" id="syncState"></span>
           <button class="chip" id="syncBtn" title="今すぐ同期">同期</button>
-        </div>
-        <div class="foot-row">
           <button class="chip" id="backupBtn" title="全作品をファイルに保存">バックアップ</button>
           <button class="chip" id="logoutBtn" style="color:var(--danger)">ログアウト</button>
         </div>
@@ -430,7 +427,7 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-10';
+    const APP_VERSION = '2026.11.25-11';
     if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
