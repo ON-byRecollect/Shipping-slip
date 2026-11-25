@@ -2,224 +2,246 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="theme-color" content="#f4f7f9" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="小説ライティング">
+  <meta name="apple-mobile-web-app-title" content="のべるん">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <title>小説ライティング</title>
+  <title>のべるん</title>
 
-  <link rel="icon" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" href="noverun-icon.png">
+  <link rel="apple-touch-icon" href="noverun-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Line+Seed+JP:wght@400;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
+    /* iOS システムカラー */
     :root {
-      --bg: #f4f7f9; --panel: #ffffff; --ink: #222; --ink-strong: #000; --muted: #8a8f95;
-      --line: #e8ebee; --accent: #000; --accent-ink: #fff; --danger: #d93025; --ok: #1e9e5a;
-      --active: #eef1f4; --shadow: 0 10px 25px rgba(0,0,0,0.06);
+      --bg: #f2f2f7; --panel: #ffffff; --ink: #000; --ink-strong: #000;
+      --muted: rgba(60,60,67,0.6); --muted2: rgba(60,60,67,0.3); --line: rgba(60,60,67,0.18);
+      --fill: rgba(118,118,128,0.12); --accent: #007aff; --accent-ink: #fff;
+      --danger: #ff3b30; --ok: #34c759; --active: rgba(0,122,255,0.12);
+      --bar: rgba(249,249,249,0.82); --side: #f2f2f7; --shadow: 0 10px 40px rgba(0,0,0,0.12);
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff; --muted: #8b9096;
-        --line: #2c2e31; --accent: #fff; --accent-ink: #000; --danger: #ff6b5e; --ok: #3ccf82;
-        --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.4);
+        --bg: #000; --panel: #1c1c1e; --ink: #fff; --ink-strong: #fff;
+        --muted: rgba(235,235,245,0.6); --muted2: rgba(235,235,245,0.3); --line: rgba(84,84,88,0.65);
+        --fill: rgba(118,118,128,0.24); --accent: #0a84ff; --danger: #ff453a; --ok: #30d158;
+        --active: rgba(10,132,255,0.22); --bar: rgba(22,22,24,0.82); --side: #000; --shadow: 0 10px 40px rgba(0,0,0,0.6);
       }
     }
     :root[data-theme="dark"] {
-      --bg: #121314; --panel: #1c1d1f; --ink: #e6e6e6; --ink-strong: #fff; --muted: #8b9096;
-      --line: #2c2e31; --accent: #fff; --accent-ink: #000; --danger: #ff6b5e; --ok: #3ccf82;
-      --active: #26282b; --shadow: 0 10px 25px rgba(0,0,0,0.4);
+      --bg: #000; --panel: #1c1c1e; --ink: #fff; --ink-strong: #fff;
+      --muted: rgba(235,235,245,0.6); --muted2: rgba(235,235,245,0.3); --line: rgba(84,84,88,0.65);
+      --fill: rgba(118,118,128,0.24); --accent: #0a84ff; --danger: #ff453a; --ok: #30d158;
+      --active: rgba(10,132,255,0.22); --bar: rgba(22,22,24,0.82); --side: #000; --shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
 
     * { box-sizing: border-box; }
     html, body { height: 100%; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
-      margin: 0; background: var(--bg); color: var(--ink);
-      font-family: 'Line Seed JP', sans-serif; -webkit-font-smoothing: antialiased;
+      margin: 0; background: var(--panel); color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Segoe UI", system-ui, sans-serif;
+      font-size: 17px; -webkit-font-smoothing: antialiased; letter-spacing: -0.01em;
     }
-    button, input, textarea { font-family: inherit; color: inherit; }
-    button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button, input, textarea { font-family: inherit; color: inherit; letter-spacing: inherit; }
+    /* iOS は 16px 未満の入力欄にフォーカスすると自動で拡大するため、必ず 16px 以上にする */
+    input, textarea { font-size: max(16px, 1em); }
+    button { cursor: pointer; -webkit-tap-highlight-color: transparent; background: none; border: none; padding: 0; }
+    button:active { opacity: 0.55; }
     [hidden] { display: none !important; }
 
     /* ---------- ログイン ---------- */
     .gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg); z-index: 100; }
-    .gate-box { width: 100%; max-width: 360px; background: var(--panel); padding: 32px 24px; border-radius: 20px; box-shadow: var(--shadow); text-align: center; }
-    .gate-box h1 { font-size: 1.3rem; margin: 0 0 6px; letter-spacing: 2px; color: var(--ink-strong); }
-    .gate-box p { font-size: 12px; color: var(--muted); margin: 0 0 22px; }
-    .gate-box input { width: 100%; padding: 14px; border: 2px solid var(--line); border-radius: 12px; font-size: 16px; background: var(--bg); outline: none; text-align: center; }
-    .gate-box input:focus { border-color: var(--accent); }
-    .gate-box button { width: 100%; margin-top: 12px; padding: 14px; border: none; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 15px; }
-    .gate-err { color: var(--danger); font-size: 12px; font-weight: 700; min-height: 18px; margin-top: 10px; }
+    .gate-box { width: 100%; max-width: 340px; text-align: center; }
+    .gate-icon { width: 88px; height: 88px; border-radius: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 18px; }
+    .gate-box h1 { font-size: 28px; font-weight: 700; margin: 0 0 6px; color: var(--ink-strong); letter-spacing: 0.02em; }
+    .gate-box p { font-size: 13px; color: var(--muted); margin: 0 0 28px; }
+    .gate-box input { width: 100%; padding: 14px 16px; border: none; border-radius: 12px; font-size: 17px; background: var(--panel); outline: none; text-align: center; }
+    .gate-box button { width: 100%; margin-top: 12px; padding: 15px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; font-size: 17px; }
+    .gate-err { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 12px; }
 
     .app { display: flex; height: 100vh; height: 100dvh; }
 
-    /* ---------- メニュー ---------- */
-    .sidebar { width: 300px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; transition: transform 0.25s ease; }
+    /* ---------- サイドバー（iPad のサイドバー風） ---------- */
+    .sidebar { width: 310px; flex-shrink: 0; background: var(--side); border-right: 0.5px solid var(--line); display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(.2,.8,.2,1); padding-top: env(safe-area-inset-top); }
     body.no-sidebar .sidebar { display: none; }
-    .side-head { padding: 18px 16px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .brand { font-weight: 700; font-size: 1.05rem; letter-spacing: 2px; color: var(--ink-strong); }
-    .btn-primary { background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px; padding: 9px 14px; font-weight: 700; font-size: 13px; white-space: nowrap; }
-    .tree { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
-    .work { margin-bottom: 6px; }
-    .work-row { display: flex; align-items: center; gap: 4px; padding: 8px 6px; border-radius: 12px; cursor: pointer; }
-    .work-row:hover, .ch-row:hover { background: var(--active); }
-    .work-row.active, .ch-row.active { background: var(--active); box-shadow: inset 3px 0 0 var(--accent); }
-    .twisty { border: none; background: none; width: 26px; height: 26px; border-radius: 8px; font-size: 11px; color: var(--muted); flex-shrink: 0; transition: transform 0.15s; }
+    .side-head { padding: 14px 16px 6px 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .brand { font-weight: 700; font-size: 32px; color: var(--ink-strong); letter-spacing: 0.01em; }
+    .add-btn { color: var(--accent); font-size: 17px; font-weight: 500; padding: 6px 4px; white-space: nowrap; }
+    .tree { flex: 1; overflow-y: auto; padding: 6px 16px 20px; -webkit-overflow-scrolling: touch; }
+    .work { margin-bottom: 18px; }
+    .work-card { background: var(--panel); border-radius: 12px; overflow: hidden; }
+    .work-row { display: flex; align-items: center; gap: 6px; padding: 11px 12px 11px 6px; cursor: pointer; min-height: 48px; }
+    .ch-row { display: flex; align-items: center; gap: 8px; padding: 11px 12px; cursor: pointer; font-size: 16px; user-select: none; -webkit-user-select: none; position: relative; min-height: 44px; }
+    .ch-row::before { content: ''; position: absolute; top: 0; left: 40px; right: 0; border-top: 0.5px solid var(--line); }
+    .work-row:active, .ch-row:active { background: var(--fill); }
+    .work-row.active, .ch-row.active { background: var(--accent); color: #fff; }
+    .work-row.active .work-name, .work-row.active .mini, .ch-row.active .mini, .ch-row.active .ch-no, .work-row.active .twisty { color: rgba(255,255,255,0.9); }
+    .ch-row.active::before, .ch-row.active + .ch-row::before { border-color: transparent; }
+    .twisty { width: 28px; height: 28px; font-size: 13px; color: var(--accent); flex-shrink: 0; transition: transform 0.2s; }
     .work.open .twisty { transform: rotate(90deg); }
-    .work-name { flex: 1; font-weight: 700; font-size: 14px; color: var(--ink-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .mini { font-size: 10px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .mini.done { color: var(--ok); font-weight: 700; }
-    .chapters { list-style: none; margin: 2px 0 0; padding: 0 0 0 22px; }
+    .work-name { flex: 1; font-weight: 600; font-size: 17px; color: var(--ink-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .mini.done { color: var(--ok); }
+    .chapters { list-style: none; margin: 0; padding: 0; }
     .work:not(.open) .chapters, .work:not(.open) .work-actions { display: none; }
-    .ch-row { display: flex; align-items: center; gap: 6px; padding: 9px 8px; border-radius: 10px; cursor: pointer; font-size: 13px; user-select: none; -webkit-user-select: none; }
     .ch-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ch-no { color: var(--muted); font-size: 11px; width: 18px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-    .handle, .mv { display: none; border: none; background: none; color: var(--muted); padding: 2px 4px; font-size: 14px; }
-    .handle { cursor: grab; touch-action: none; font-size: 16px; }
+    .ch-no { color: var(--muted); font-size: 13px; width: 20px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .handle, .mv { display: none; color: var(--muted); padding: 2px 6px; font-size: 16px; }
+    .mv { color: var(--accent); }
+    .handle { cursor: grab; touch-action: none; font-size: 18px; }
     .sorting .handle, .sorting .mv { display: inline-block; }
-    .sorting .ch-row { cursor: default; background: var(--bg); margin-bottom: 3px; }
+    .sorting .ch-row { cursor: default; }
     .sorting .ch-row .mini { display: none; }
-    .ch-row.dragging { opacity: 0.9; box-shadow: var(--shadow); position: relative; z-index: 5; background: var(--panel); }
-    .work-actions { display: flex; gap: 6px; padding: 6px 0 4px 22px; }
-    .chip { border: 1px solid var(--line); background: transparent; border-radius: 99px; padding: 5px 11px; font-size: 11px; font-weight: 700; color: var(--ink); }
-    .chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-    .empty-tree { color: var(--muted); font-size: 13px; text-align: center; padding: 30px 10px; line-height: 1.8; }
-    .side-foot { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .ch-row.dragging { box-shadow: var(--shadow); z-index: 5; background: var(--panel); border-radius: 10px; transform: scale(1.02); }
+    .work-actions { display: flex; justify-content: space-between; padding: 8px 6px 0; }
+    .chip { color: var(--accent); font-size: 15px; padding: 4px 6px; }
+    .chip.on { font-weight: 600; }
+    .empty-tree { color: var(--muted); font-size: 15px; text-align: center; padding: 40px 10px; line-height: 1.8; }
+    .side-foot { border-top: 0.5px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 14px; }
 
     /* ---------- メイン ---------- */
-    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-    .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); min-height: 52px; }
-    .crumb { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .crumb b { color: var(--ink-strong); }
-    .crumb a { color: inherit; text-decoration: none; cursor: pointer; }
-    .crumb a:hover { text-decoration: underline; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
+    .topbar {
+      display: flex; align-items: center; gap: 10px; padding: 6px 12px; padding-top: calc(6px + env(safe-area-inset-top));
+      background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--line); min-height: 50px; position: relative; z-index: 2;
+    }
+    .crumb { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; font-size: 17px; overflow: hidden; }
+    .crumb a { color: var(--accent); text-decoration: none; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; flex-shrink: 1; }
+    .crumb a:active { opacity: 0.5; }
+    .crumb b { font-weight: 600; color: var(--ink-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .counts { display: flex; gap: 6px; flex-shrink: 0; }
-    .count { display: flex; flex-direction: column; align-items: flex-end; padding: 3px 10px; border-radius: 10px; background: var(--bg); line-height: 1.25; min-width: 82px; }
-    .count small { font-size: 9px; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
-    .count span { font-size: 13px; font-weight: 700; color: var(--ink-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .count { display: flex; flex-direction: column; align-items: flex-end; padding: 4px 10px 5px; border-radius: 10px; background: var(--fill); line-height: 1.2; min-width: 88px; }
+    .count small { font-size: 10px; color: var(--muted); font-weight: 600; }
+    .count span { font-size: 14px; font-weight: 600; color: var(--ink-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .count.done span { color: var(--ok); }
-    .count .bar { width: 100%; height: 3px; background: var(--line); border-radius: 9px; margin-top: 3px; overflow: hidden; }
-    .count .bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+    .count .bar { width: 100%; height: 3px; background: var(--fill); border-radius: 9px; margin-top: 3px; overflow: hidden; }
+    .count .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 9px; transition: width 0.25s; }
     .count.done .bar i { background: var(--ok); }
-    .icon-btn { border: 1px solid var(--line); background: transparent; border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .icon-btn { color: var(--accent); font-size: 22px; width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .icon-btn svg { width: 22px; height: 22px; }
 
-    .toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .toolbar { display: flex; align-items: center; gap: 2px; padding: 4px 8px; background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid var(--line); overflow-x: auto; scrollbar-width: none; }
     .toolbar::-webkit-scrollbar { display: none; }
-    .tool { flex-shrink: 0; background: transparent; border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .tool:hover { background: var(--active); }
-    .tool.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-    .tool.ins { min-width: 46px; font-size: 14px; }
-    .sep { width: 1px; height: 22px; background: var(--line); flex-shrink: 0; margin: 0 2px; }
-    .save-state { flex-shrink: 0; margin-left: auto; padding-left: 8px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .tool { flex-shrink: 0; color: var(--accent); border-radius: 8px; padding: 8px 10px; font-size: 15px; white-space: nowrap; }
+    .tool.on { background: var(--active); font-weight: 600; }
+    .tool.ins { min-width: 44px; font-size: 16px; }
+    .sep { width: 0.5px; height: 20px; background: var(--line); flex-shrink: 0; margin: 0 4px; }
+    .save-state { flex-shrink: 0; margin-left: auto; padding: 0 6px 0 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-    .view { flex: 1; overflow: auto; }
+    .view { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; }
 
-    /* エディタ */
-    .editor { max-width: 760px; margin: 0 auto; padding: 32px 32px 120px; display: flex; flex-direction: column; min-height: 100%; }
-    .ch-head { display: flex; align-items: flex-end; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 12px; margin-bottom: 18px; }
-    .ch-title { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 1.5rem; font-weight: 700; color: var(--ink-strong); padding: 0; }
-    .goal-field { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); flex-shrink: 0; padding-bottom: 4px; }
-    .goal-field input { width: 84px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 13px; text-align: right; outline: none; }
-    .goal-field input:focus { border-color: var(--accent); }
-    .body-input, .preview { flex: 1; font-size: var(--fs, 17px); line-height: 2; letter-spacing: 0.02em; color: var(--ink); }
-    .body-input { min-height: 60vh; width: 100%; border: none; outline: none; background: transparent; resize: none; padding: 0; }
-    .ch-title::placeholder, .body-input::placeholder { color: var(--muted); opacity: 0.7; }
+    /* エディタ（メモアプリ風） */
+    .editor { max-width: 720px; margin: 0 auto; padding: 24px 24px 120px; display: flex; flex-direction: column; min-height: 100%; }
+    .ch-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; margin-bottom: 14px; border-bottom: 0.5px solid var(--line); }
+    .ch-title { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 28px; font-weight: 700; color: var(--ink-strong); padding: 0; letter-spacing: 0.01em; }
+    .goal-field { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); flex-shrink: 0; }
+    .goal-field input { width: 92px; padding: 6px 10px; border: none; border-radius: 8px; background: var(--fill); font-size: 16px; text-align: right; outline: none; font-variant-numeric: tabular-nums; }
+    .body-input, .preview { flex: 1; font-size: var(--fs, 17px); line-height: 1.95; letter-spacing: 0.03em; color: var(--ink); }
+    .body-input { min-height: 60vh; width: 100%; border: none; outline: none; background: transparent; resize: none; padding: 0; caret-color: var(--accent); }
+    .ch-title::placeholder, .body-input::placeholder { color: var(--muted2); }
     .preview p { margin: 0; min-height: 1em; }
     .preview rt { font-size: 0.5em; color: var(--muted); }
-    body.serif .body-input, body.serif .preview, body.serif .ch-title { font-family: 'Noto Serif JP', serif; }
-    .ch-foot { margin-top: 30px; display: flex; justify-content: flex-end; }
-    .danger-link { border: none; background: none; color: var(--danger); font-size: 12px; font-weight: 700; padding: 6px; }
+    body.serif .body-input, body.serif .preview, body.serif .ch-title { font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif; }
+    .ch-foot { margin-top: 40px; display: flex; justify-content: center; }
+    .danger-link { color: var(--danger); font-size: 15px; padding: 8px; }
 
     /* 縦書き */
-    body.vertical .editor { max-width: none; margin: 0; height: 100%; min-height: 0; padding: 28px 28px 28px; flex-direction: row-reverse; }
-    body.vertical .ch-head { writing-mode: vertical-rl; flex-direction: row; align-items: flex-start; border-bottom: none; border-left: 1px dashed var(--line); padding: 0 0 0 12px; margin: 0 0 0 18px; }
+    body.vertical .editor { max-width: none; margin: 0; height: 100%; min-height: 0; padding: 24px; flex-direction: row-reverse; }
+    body.vertical .ch-head { writing-mode: vertical-rl; flex-direction: row; align-items: flex-start; border-bottom: none; border-left: 0.5px solid var(--line); padding: 0 0 0 12px; margin: 0 0 0 18px; }
     body.vertical .ch-title { width: auto; height: 100%; }
-    body.vertical .goal-field { padding: 0 4px 0 0; }
     body.vertical .goal-field input { writing-mode: horizontal-tb; }
     body.vertical .body-input, body.vertical .preview { writing-mode: vertical-rl; text-orientation: mixed; min-height: 0; height: 100%; min-width: 0; overflow-x: auto; }
     body.vertical .ch-foot { display: none; }
 
-    /* 作品詳細 */
-    .detail { max-width: 760px; margin: 0 auto; padding: 32px 24px 100px; }
-    .detail-grid { display: grid; grid-template-columns: 200px 1fr; gap: 28px; }
-    .cover { position: relative; width: 200px; aspect-ratio: 1 / 1.414; border-radius: 12px; overflow: hidden; background: var(--active); border: 2px dashed var(--line); display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 12px; cursor: pointer; }
+    /* 作品詳細（設定アプリ風のグループ表示） */
+    .view.grouped { background: var(--bg); }
+    .detail { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+    .cover-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
+    .cover { position: relative; width: 150px; aspect-ratio: 1 / 1.414; border-radius: 8px; overflow: hidden; background: var(--panel); display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 13px; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+    .cover:not(.has-img) { box-shadow: none; border: 1.5px dashed var(--muted2); }
     .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .cover.has-img { border-style: solid; }
-    .cover-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: center; }
-    .field-label { font-size: 11px; font-weight: 700; color: var(--muted); margin: 0 0 6px; letter-spacing: 1px; }
-    .work-title-input { width: 100%; border: none; border-bottom: 2px solid var(--line); background: transparent; font-size: 1.6rem; font-weight: 700; color: var(--ink-strong); padding: 4px 0 10px; outline: none; margin-bottom: 20px; }
-    .work-title-input:focus { border-color: var(--accent); }
-    .synopsis { width: 100%; min-height: 180px; border: 2px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px 14px; font-size: 15px; line-height: 1.9; outline: none; resize: vertical; }
-    .synopsis:focus { border-color: var(--accent); }
-    .goal-card { margin-top: 32px; background: var(--panel); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
-    .goal-card h3 { margin: 0 0 4px; font-size: 14px; color: var(--ink-strong); }
-    .goal-card .note { font-size: 11px; color: var(--muted); margin: 0 0 12px; }
-    table.goals { width: 100%; border-collapse: collapse; font-size: 13px; }
-    table.goals td, table.goals th { padding: 9px 6px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
-    table.goals td:first-child, table.goals th:first-child { text-align: left; }
-    table.goals th { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-    table.goals tfoot td { font-weight: 700; border-bottom: none; color: var(--ink-strong); }
+    .cover-actions { display: flex; gap: 18px; margin-top: 12px; justify-content: center; }
+    .text-btn { color: var(--accent); font-size: 15px; padding: 4px; }
+    .text-btn.danger { color: var(--danger); }
+    .section-label { font-size: 13px; color: var(--muted); margin: 24px 16px 7px; }
+    .section-note { font-size: 13px; color: var(--muted); margin: 7px 16px 0; line-height: 1.5; }
+    .section-note.center { text-align: center; margin-top: 18px; }
+    .group { background: var(--panel); border-radius: 12px; overflow: hidden; }
+    .group + .group { margin-top: 24px; }
+    .work-title-input { width: 100%; border: none; background: transparent; font-size: 17px; color: var(--ink-strong); padding: 13px 16px; outline: none; }
+    .synopsis { display: block; width: 100%; min-height: 160px; border: none; background: transparent; padding: 12px 16px; font-size: 17px; line-height: 1.7; outline: none; resize: vertical; }
+    .work-title-input::placeholder, .synopsis::placeholder { color: var(--muted2); }
+    .group-btn { display: block; width: 100%; padding: 13px 16px; font-size: 17px; color: var(--accent); text-align: left; }
+    .group-btn.danger { color: var(--danger); text-align: center; }
+    table.goals { width: 100%; border-collapse: collapse; font-size: 16px; }
+    table.goals td, table.goals th { padding: 10px 16px 10px 0; text-align: right; font-variant-numeric: tabular-nums; position: relative; }
+    table.goals td:first-child, table.goals th:first-child { text-align: left; padding-left: 16px; max-width: 0; width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    table.goals tbody tr td, table.goals tfoot td { border-top: 0.5px solid var(--line); }
+    table.goals th { font-size: 12px; color: var(--muted); font-weight: 400; padding-top: 10px; padding-bottom: 6px; }
+    table.goals tfoot td { font-weight: 600; color: var(--ink-strong); }
+    table.goals td.num { color: var(--muted); }
     table.goals tr.link { cursor: pointer; }
-    table.goals tr.link:hover td { background: var(--active); }
-    table.goals input { width: 80px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); text-align: right; font-size: 12px; outline: none; }
-    .detail-foot { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .meta { font-size: 11px; color: var(--muted); }
+    table.goals tr.link:active td { background: var(--fill); }
+    table.goals input { width: 88px; padding: 5px 8px; border: none; border-radius: 7px; background: var(--fill); text-align: right; font-size: 16px; outline: none; }
 
-    .empty-view { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); padding: 24px; text-align: center; }
+    .empty-view { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--muted); padding: 24px; text-align: center; font-size: 15px; background: var(--bg); }
+    .btn-primary { background: var(--accent); color: #fff; border-radius: 12px; padding: 13px 22px; font-weight: 600; font-size: 17px; }
 
     /* 集中モード */
     body.focus .sidebar { display: none; }
-    body.focus .toolbar { opacity: 0.2; transition: opacity 0.2s; }
+    body.focus .toolbar { opacity: 0.25; transition: opacity 0.2s; }
     body.focus .toolbar:hover, body.focus .toolbar:focus-within { opacity: 1; }
 
-    /* モーダル */
-    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
-    .modal { width: 100%; max-width: 380px; background: var(--panel); border-radius: 18px; padding: 22px; box-shadow: var(--shadow); }
-    .modal h3 { margin: 0 0 14px; font-size: 15px; color: var(--ink-strong); }
-    .modal label { display: block; font-size: 11px; color: var(--muted); font-weight: 700; margin: 10px 0 5px; }
-    .modal input { width: 100%; padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 16px; outline: none; }
-    .modal input:focus { border-color: var(--accent); }
-    .ruby-preview { margin-top: 14px; padding: 12px; background: var(--bg); border-radius: 10px; text-align: center; font-size: 20px; min-height: 56px; }
+    /* アラート（iOS 風） */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; animation: fade 0.15s; }
+    .modal { width: 290px; background: var(--panel); box-shadow: var(--shadow); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); border-radius: 14px; overflow: hidden; text-align: center; animation: pop 0.2s cubic-bezier(.2,.9,.3,1.2); }
+    .modal-body { padding: 20px 16px 16px; }
+    .modal h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; color: var(--ink-strong); }
+    .modal .sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+    .modal label { display: block; font-size: 12px; color: var(--muted); margin: 10px 2px 4px; text-align: left; }
+    .modal input { width: 100%; padding: 8px 10px; border: 0.5px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 16px; outline: none; }
+    .ruby-preview { margin-top: 14px; padding: 10px; border-radius: 8px; font-size: 22px; min-height: 52px; }
     .ruby-preview rt { font-size: 0.5em; color: var(--muted); }
-    .modal-btns { display: flex; gap: 8px; margin-top: 18px; }
-    .modal-btns button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
-    .btn-ghost { background: transparent; border: 1px solid var(--line); }
-    .modal-btns .btn-primary { padding: 12px; }
+    .modal-btns { display: flex; border-top: 0.5px solid var(--line); }
+    .modal-btns button { flex: 1; padding: 12px; font-size: 17px; color: var(--accent); }
+    .modal-btns button + button { border-left: 0.5px solid var(--line); font-weight: 600; }
+    @keyframes fade { from { opacity: 0; } }
+    @keyframes pop { from { opacity: 0; transform: scale(1.15); } }
 
-    .toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%) translateY(20px); background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 80; white-space: nowrap; }
+    .toast { position: fixed; left: 50%; bottom: calc(40px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(10px); background: var(--bar); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--ink-strong); padding: 11px 20px; border-radius: 99px; font-size: 15px; font-weight: 500; opacity: 0; pointer-events: none; transition: 0.25s; z-index: 80; white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,0.15); }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .scrim { display: none; }
     .menu-btn { display: none; }
 
     @media (max-width: 760px) {
-      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%); box-shadow: var(--shadow); width: min(320px, 88vw); }
+      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; transform: translateX(-100%); box-shadow: var(--shadow); width: min(330px, 88vw); }
       body.no-sidebar .sidebar { display: flex; }
       body.drawer .sidebar { transform: translateX(0); }
-      body.drawer .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 20; }
-      .menu-btn { display: inline-block; }
+      body.drawer .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 20; }
+      .menu-btn { display: inline-flex; }
       .side-toggle { display: none; }
-      .topbar { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
-      .crumb { order: 1; flex-basis: calc(100% - 70px); }
-      .counts { order: 3; width: 100%; }
-      .count { flex: 1; min-width: 0; }
-      .menu-btn { order: 0; }
-      .editor { padding: 22px 16px 100px; }
-      .ch-title { font-size: 1.2rem; }
-      .detail { padding: 22px 16px 80px; }
-      .detail-grid { grid-template-columns: 1fr; gap: 18px; }
-      .cover-wrap { display: flex; flex-direction: column; align-items: center; }
-      .cover { width: 160px; }
-      .toolbar { padding: 8px 12px; }
-      body.vertical .editor { padding: 18px 14px; }
+      .topbar { flex-wrap: wrap; gap: 6px 8px; padding-left: 8px; padding-right: 8px; }
+      .crumb { flex-basis: calc(100% - 50px); }
+      .counts { width: 100%; padding-bottom: 2px; }
+      .count { flex: 1; min-width: 0; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 0 8px; }
+      .count small { font-size: 11px; }
+      .count span { margin-left: auto; }
+      .count .bar { flex-basis: 100%; }
+      .editor { padding: 18px 16px 100px; }
+      .ch-title { font-size: 24px; }
+      body.vertical .editor { padding: 16px 14px; }
     }
   </style>
 </head>
@@ -227,7 +249,8 @@
   <!-- ログイン -->
   <div class="gate" id="gate" hidden>
     <form class="gate-box" id="gateForm" autocomplete="off">
-      <h1>小説ライティング</h1>
+      <img class="gate-icon" src="noverun-icon.png" alt="">
+      <h1>のべるん</h1>
       <p>この端末で初めて使うときだけパスワードが必要です</p>
       <input id="gateInput" type="password" placeholder="パスワード" autocomplete="current-password" required>
       <button type="submit">ログイン</button>
@@ -238,8 +261,8 @@
   <div class="app" id="app" hidden>
     <aside class="sidebar">
       <div class="side-head">
-        <div class="brand">小説ライティング</div>
-        <button class="btn-primary" id="newWorkBtn">＋ 作品</button>
+        <div class="brand">のべるん</div>
+        <button class="add-btn" id="newWorkBtn">＋ 新規作品</button>
       </div>
       <div class="tree" id="tree"></div>
       <div class="side-foot">
@@ -252,8 +275,8 @@
 
     <main class="main">
       <div class="topbar">
-        <button class="icon-btn menu-btn" id="menuBtn" aria-label="メニュー">☰</button>
-        <button class="icon-btn side-toggle" id="sideToggle" title="メニューの表示切替">☰</button>
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="メニュー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+        <button class="icon-btn side-toggle" id="sideToggle" title="メニューの表示切替"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
         <div class="crumb" id="crumb"></div>
         <div class="counts" id="counts">
           <div class="count" id="chCount"><small>この話</small><span>0/0</span><div class="bar"><i></i></div></div>
@@ -507,7 +530,9 @@
         const sorting = state.sorting === w.id;
         const t = workTotals(w);
         const workEl = h('div', { class: 'work' + (open ? ' open' : '') + (sorting ? ' sorting' : '') });
-        workEl.append(h('div', {
+        const card = h('div', { class: 'work-card' });
+        workEl.append(card);
+        card.append(h('div', {
           class: 'work-row' + (cur.work === w && cur.type === 'detail' ? ' active' : ''),
           onclick: () => navigate({ type: 'detail', workId: w.id })
         },
@@ -532,7 +557,7 @@
           );
           ul.append(li);
         });
-        workEl.append(ul);
+        card.append(ul);
         workEl.append(h('div', { class: 'work-actions' },
           h('button', { class: 'chip', onclick: () => { state.sorting = null; const c = newChapter(w); touch(w); navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); setTimeout(() => { const t = document.querySelector('.ch-title'); t && t.select(); }, 0); } }, '＋ サブタイトル'),
           w.chapters.length > 1 ? h('button', { class: 'chip' + (sorting ? ' on' : ''), onclick: () => { state.sorting = sorting ? null : w.id; renderTree(); } }, sorting ? '並び替え完了' : '並び替え') : null
@@ -603,11 +628,11 @@
       const { work, chapter } = current();
       const c = $('crumb');
       c.innerHTML = '';
-      if (!work) { c.textContent = '小説ライティング'; return; }
+      if (!work) { c.append(h('b', {}, 'のべるん')); return; }
       if (chapter) {
-        c.append(h('a', { onclick: () => navigate({ type: 'detail', workId: work.id }) }, work.title || '無題の作品'), ' ） ', h('b', {}, chapter.title || '（無題）'));
+        c.append(h('a', { onclick: () => navigate({ type: 'detail', workId: work.id }) }, '‹ ' + (work.title || '無題の作品')), h('b', {}, chapter.title || '（無題）'));
       } else {
-        c.append(h('b', {}, work.title || '無題の作品'), ' ） 作品詳細');
+        c.append(h('b', {}, '作品詳細'));
       }
     }
     // 並び替えなどで番号だけ変わったときの軽い更新
@@ -624,6 +649,7 @@
     function renderView() {
       const view = $('view');
       view.innerHTML = '';
+      view.classList.remove('grouped');
       view.scrollTop = 0;
       const cur = current();
       $('toolbar').hidden = cur.type !== 'chapter';
@@ -750,13 +776,15 @@
       baseIn.addEventListener('keydown', onKey); readIn.addEventListener('keydown', onKey);
       const bg = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === bg) close(); } },
         h('div', { class: 'modal', role: 'dialog', 'aria-label': 'ルビを設定' },
-          h('h3', {}, 'ルビを設定'),
-          h('label', {}, '親文字'), baseIn,
-          h('label', {}, 'ふりがな'), readIn,
-          pv,
+          h('div', { class: 'modal-body' },
+            h('h3', {}, 'ルビを設定'),
+            h('p', { class: 'sub' }, '親文字とふりがなを入力してください'),
+            h('label', {}, '親文字'), baseIn,
+            h('label', {}, 'ふりがな'), readIn,
+            pv),
           h('div', { class: 'modal-btns' },
-            h('button', { class: 'btn-ghost', onclick: close }, 'キャンセル'),
-            h('button', { class: 'btn-primary', onclick: ok }, '挿入'))
+            h('button', { onclick: close }, 'キャンセル'),
+            h('button', { onclick: ok }, '挿入'))
         ));
       document.body.append(bg);
       upd();
@@ -786,7 +814,7 @@
         });
         return h('tr', { class: 'link', onclick: () => navigate({ type: 'chapter', workId: work.id, chapterId: c.id }) },
           h('td', {}, `${i + 1}. ${c.title || '（無題）'}`),
-          h('td', {}, fmt(chCount(c))),
+          h('td', { class: 'num' }, fmt(chCount(c))),
           h('td', {}, goalIn));
       });
       const totalCount = h('td', {}, fmt(t.count)), totalGoal = h('td', {}, fmt(t.goal));
@@ -797,31 +825,28 @@
       }
 
       const d = new Date(work.created);
+      view.classList.add('grouped');
       view.append(h('div', { class: 'detail' },
-        h('div', { class: 'detail-grid' },
-          h('div', { class: 'cover-wrap' },
-            coverBox,
-            work.cover ? h('div', { class: 'cover-actions' },
-              h('button', { class: 'chip', onclick: () => $('coverFile').click() }, '変更'),
-              h('button', { class: 'chip', onclick: () => { if (confirm('表紙画像を削除しますか？')) { work.cover = ''; touch(work); renderView(); } } }, '削除')) : null),
-          h('div', {},
-            h('div', { class: 'field-label' }, '作品名'), titleIn,
-            h('div', { class: 'field-label' }, 'あらすじ'), syn)
-        ),
-        h('div', { class: 'goal-card' },
-          h('h3', {}, '目標文字数'),
-          h('p', { class: 'note' }, '作品の目標はサブタイトルごとの目標の合計です。文字数はルビ記法・空白・改行を除いて数えます。'),
+        h('div', { class: 'cover-wrap' },
+          coverBox,
+          h('div', { class: 'cover-actions' },
+            h('button', { class: 'text-btn', onclick: () => $('coverFile').click() }, work.cover ? '表紙を変更' : '表紙を追加'),
+            work.cover ? h('button', { class: 'text-btn danger', onclick: () => { if (confirm('表紙画像を削除しますか？')) { work.cover = ''; touch(work); renderView(); } } }, '削除') : null)),
+        h('div', { class: 'section-label' }, '作品名'),
+        h('div', { class: 'group' }, titleIn),
+        h('div', { class: 'section-label' }, 'あらすじ'),
+        h('div', { class: 'group' }, syn),
+        h('div', { class: 'section-label' }, '目標文字数'),
+        h('div', { class: 'group' },
           h('table', { class: 'goals' },
             h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, '目標'))),
             h('tbody', {}, rows.length ? rows : h('tr', {}, h('td', { colspan: '3' }, 'サブタイトルがありません'))),
-            h('tfoot', {}, h('tr', {}, h('td', {}, '合計'), totalCount, totalGoal)))
-          ,
-          h('div', { style: 'margin-top:12px' },
-            h('button', { class: 'chip', onclick: () => { const c = newChapter(work); touch(work); navigate({ type: 'chapter', workId: work.id, chapterId: c.id }); } }, '＋ サブタイトルを追加'))
-        ),
-        h('div', { class: 'detail-foot' },
-          h('span', { class: 'meta' }, `作成日 ${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}・全${work.chapters.length}話`),
-          h('button', { class: 'danger-link', onclick: () => deleteWork(work) }, 'この作品を削除'))
+            h('tfoot', {}, h('tr', {}, h('td', {}, '合計'), totalCount, totalGoal))),
+          h('button', { class: 'group-btn', style: 'border-top:0.5px solid var(--line)', onclick: () => { const c = newChapter(work); touch(work); navigate({ type: 'chapter', workId: work.id, chapterId: c.id }); } }, '＋ サブタイトルを追加')),
+        h('div', { class: 'section-note' }, '作品の目標は、サブタイトルごとの目標の合計です。文字数はルビ記法・空白・改行を除いて数えます。'),
+        h('div', { class: 'group', style: 'margin-top:32px' },
+          h('button', { class: 'group-btn danger', onclick: () => deleteWork(work) }, 'この作品を削除')),
+        h('div', { class: 'section-note center' }, `作成日 ${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}・全${work.chapters.length}話`)
       ));
     }
     async function deleteWork(work) {
@@ -913,7 +938,7 @@
       const data = { app: 'novel-writer', version: 1, exported: new Date().toISOString(), works: state.works.map(serialize) };
       const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       const d = new Date();
-      const a = h('a', { href: URL.createObjectURL(blob), download: `小説バックアップ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json` });
+      const a = h('a', { href: URL.createObjectURL(blob), download: `のべるんバックアップ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json` });
       document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     });
