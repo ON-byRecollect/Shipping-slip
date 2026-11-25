@@ -325,6 +325,10 @@
     .editor.fill { height: 100%; min-height: 0; padding-bottom: 0; }
     .editor.fill .body-input { flex: 1; min-height: 0; height: auto; overflow-y: auto; padding-bottom: 40vh; }
     body.vertical .editor.fill .body-input { padding-bottom: 0; }
+    /* 本文は普通の太さで表示する。iOS の「文字を太くする」設定は標準書体（-apple-system）を太くするため、
+       Apple 端末ではヒラギノを名前で指定し、細め（W3相当）の太さにする */
+    .body-input, .preview { font-weight: 400; }
+    html.apple .body-input, html.apple .preview { font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif; font-weight: 300; }
   </style>
 </head>
 <body>
@@ -402,7 +406,8 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    const APP_VERSION = '2026.11.25-3'; // 公開のたびに更新する（新しい版の自動切り替えに使う）
+    const APP_VERSION = '2026.11.25-4';
+    if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) document.documentElement.classList.add('apple'); // 公開のたびに更新する（新しい版の自動切り替えに使う）
     const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
     const TABLE = 'novel_works';
