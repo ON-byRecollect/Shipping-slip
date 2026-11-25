@@ -169,6 +169,12 @@
     .count.done .bar i { background: var(--ok); }
     .icon-btn { color: var(--accent); font-size: 22px; width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .icon-btn svg { width: 22px; height: 22px; }
+    .icon-btn { min-width: 44px; min-height: 44px; } /* 押しやすい大きさを確保 */
+    /* 横向きのタッチ端末：画面の角・縁に近すぎないよう左の余白を確保 */
+    @media (orientation: landscape) and (pointer: coarse) {
+      .sidebar { padding-left: max(env(safe-area-inset-left), 12px); }
+      body.no-sidebar .main, body.focus .main { padding-left: max(env(safe-area-inset-left), 24px); }
+    }
 
     .toolbar { display: flex; align-items: center; gap: 2px; padding: 4px 8px; background: var(--bar); border-bottom: 0.5px solid var(--line); overflow-x: auto; scrollbar-width: none; }
     .toolbar::-webkit-scrollbar { display: none; }
@@ -1347,9 +1353,10 @@
       // 全画面表示のときは端末の画面サイズ（回転の影響を受けない）から本来の高さを求める
       if (isIOSStandalone()) {
         const sw = Math.min(screen.width, screen.height), sh = Math.max(screen.width, screen.height);
-        const land = window.innerWidth > window.innerHeight;
+        const land = window.matchMedia ? matchMedia('(orientation: landscape)').matches : window.innerWidth > window.innerHeight;
         const fullW = land ? sh : sw, fullH = land ? sw : sh;
-        if (Math.abs(window.innerWidth - fullW) <= 2) { // 分割表示などでは使わない
+        // 分割表示など画面の一部だけを使っているときは使わない（回転直後の値の揺れは許容）
+        if (window.innerWidth >= fullW * 0.9) {
           keyboard = keyboard && fullH - h > 150;          // 本当にキーボードが開いているか
           if (!keyboard) h = Math.max(h, fullH);
         }
@@ -1369,6 +1376,8 @@
     document.addEventListener('focusout', () => setTimeout(() => { if (!isTyping()) fitSoon(); }, 50));
     window.addEventListener('scroll', () => { if (!isTyping()) window.scrollTo(0, 0); }, { passive: true });
     fitViewport();
+    // 回転後しばらくしてから値が変わることがあるため、入力中以外は定期的に確認する
+    setInterval(() => { if (!isTyping() && !document.hidden) fitViewport(); }, 1000);
     $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
     $('scrim').addEventListener('click', () => document.body.classList.remove('drawer'));
     $('newWorkBtn').addEventListener('click', () => {
