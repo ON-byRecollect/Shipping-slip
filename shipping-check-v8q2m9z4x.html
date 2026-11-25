@@ -150,7 +150,8 @@
     .crumb a:active { opacity: 0.5; }
     .crumb b { font-weight: 600; color: var(--ink-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .counts { display: flex; gap: 6px; flex-shrink: 0; }
-    .count { display: flex; flex-direction: column; align-items: flex-end; padding: 4px 10px 5px; border-radius: 10px; background: var(--fill); line-height: 1.2; min-width: 88px; }
+    .count { display: flex; flex-direction: column; align-items: flex-end; padding: 4px 10px 5px; border-radius: 0; background: transparent; line-height: 1.2; min-width: 88px; }
+    #chCount:not([hidden]) + .count { border-left: 0.5px solid var(--line); } /* 背景なしでも2つを区切る */
     .count small { font-size: 10px; color: var(--muted); font-weight: 600; }
     .count span { font-size: 14px; font-weight: 600; color: var(--ink-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .count.done span { color: var(--ok); }
@@ -263,14 +264,14 @@
       .topbar { flex-wrap: wrap; gap: 6px 8px; padding-left: 8px; padding-right: 8px; }
       /* メニューボタンを「この話」の段まで縦に伸ばし、その分カウントの横幅を詰める */
       .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; row-gap: 6px; align-items: center; }
-      .menu-btn { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; width: 48px; height: auto; min-height: 36px; background: var(--fill); border-radius: 12px; }
+      .menu-btn { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; width: 48px; height: auto; min-height: 36px; background: transparent; border-radius: 12px; }
       .crumb { grid-column: 2; grid-row: 1; }
       .counts { grid-column: 2; grid-row: 2; width: auto; min-width: 0; padding-bottom: 2px; }
       /* 作品詳細・本文：カウントを右端に置き、横幅を詰めて2段分の高さにする */
       body.has-counts .topbar { grid-template-columns: auto minmax(0, 1fr) auto; }
       body.has-counts .crumb { grid-row: 1 / span 2; }
       body.has-counts .counts { grid-column: 3; grid-row: 1 / span 2; align-self: stretch; padding-bottom: 0; width: auto; }
-      body.has-counts .count { flex: none; width: auto; min-width: 92px; max-width: 34vw; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 6px 10px; border-radius: 12px; }
+      body.has-counts .count { flex: none; width: auto; min-width: 92px; max-width: 34vw; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 6px 10px; border-radius: 0; }
       body.has-counts .count small { font-size: 12px; }
       body.has-counts .count span { margin-left: 0; font-size: 17px; }
       body.has-counts .count .bar { flex-basis: auto; margin-top: 4px; }
