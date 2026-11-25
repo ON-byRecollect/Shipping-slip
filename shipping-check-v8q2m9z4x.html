@@ -102,9 +102,30 @@
     .handle, .mv { display: none; color: var(--muted); padding: 2px 6px; font-size: 16px; }
     .mv { color: var(--accent); }
     .handle { cursor: grab; touch-action: none; font-size: 18px; }
-    .sorting .handle, .sorting .mv { display: inline-block; }
-    .sorting .ch-row { cursor: default; }
-    .sorting .ch-row .mini { display: none; }
+    .tree.editing .handle, .tree.editing .mv, .detail.editing .handle, .detail.editing .mv { display: inline-block; }
+    .tree.editing .ch-row, .tree.editing .work-row { cursor: default; }
+    .tree.editing .ch-row.active, .tree.editing .work-row.active { background: transparent; color: inherit; }
+    .tree.editing .work-row.active .work-name { color: var(--ink-strong); }
+    .tree.editing .ch-row.active .ch-no { color: var(--muted); }
+    .tree.editing .ch-row::before { border-color: var(--line) !important; }
+    .tree.editing .mini, .tree.editing .twisty { visibility: hidden; }
+    .tree.editing .twisty { width: 6px; }
+    .work.dragging { box-shadow: var(--shadow); border-radius: 12px; position: relative; z-index: 5; transform: scale(1.02); }
+    .placeholder { color: var(--muted) !important; font-weight: 400 !important; }
+    .side-tools { display: flex; align-items: center; gap: 12px; padding: 4px 16px 12px 20px; }
+    .seg { flex: 1; display: flex; background: var(--fill); border-radius: 9px; padding: 2px; }
+    .seg button { flex: 1; padding: 6px 4px; font-size: 13px; border-radius: 7px; color: var(--ink); }
+    .seg button.on { background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,0.12); font-weight: 600; }
+    .section-label.with-btn { display: flex; justify-content: space-between; align-items: center; }
+    .section-label .text-btn { font-size: 13px; padding: 0; }
+    .section-note.warn { color: var(--danger); }
+    .section-note.warn:empty { display: none; }
+    .group-btn:disabled { color: var(--muted2); cursor: default; }
+    .del-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 16px; line-height: 22px; margin-right: 10px; vertical-align: middle; font-weight: 700; }
+    .row-tools { display: inline-flex; gap: 2px; align-items: center; }
+    .detail tr.dragging td { background: var(--panel); }
+    tr.dragging { box-shadow: var(--shadow); position: relative; z-index: 5; }
+    .body-input:disabled { background: transparent; opacity: 1; -webkit-text-fill-color: var(--muted2); }
     .ch-row.dragging { box-shadow: var(--shadow); z-index: 5; background: var(--panel); border-radius: 10px; transform: scale(1.02); }
     .work-actions { display: flex; justify-content: space-between; padding: 8px 6px 0; }
     .chip { color: var(--accent); font-size: 15px; padding: 4px 6px; }
@@ -240,8 +261,11 @@
       .menu-btn { display: inline-flex; }
       .side-toggle { display: none; }
       .topbar { flex-wrap: wrap; gap: 6px 8px; padding-left: 8px; padding-right: 8px; }
-      .crumb { flex-basis: calc(100% - 50px); }
-      .counts { width: 100%; padding-bottom: 2px; }
+      /* メニューボタンを「この話」の段まで縦に伸ばし、その分カウントの横幅を詰める */
+      .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; row-gap: 6px; align-items: center; }
+      .menu-btn { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; width: 48px; height: auto; min-height: 36px; background: var(--fill); border-radius: 12px; }
+      .crumb { grid-column: 2; grid-row: 1; }
+      .counts { grid-column: 2; grid-row: 2; width: auto; min-width: 0; padding-bottom: 2px; }
       .count { flex: 1; min-width: 0; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 0 8px; }
       .count small { font-size: 11px; }
       .count span { margin-left: auto; }
@@ -271,6 +295,13 @@
       <div class="side-head">
         <div class="brand">のべるん</div>
         <button class="add-btn" id="newWorkBtn">＋ 新規作品</button>
+      </div>
+      <div class="side-tools">
+        <div class="seg" id="orderSeg" role="group" aria-label="作品の並び順">
+          <button data-order="recent">最終編集順</button>
+          <button data-order="manual">手動</button>
+        </div>
+        <button class="chip" id="editBtn">編集</button>
       </div>
       <div class="tree" id="tree"></div>
       <div class="account">
@@ -496,9 +527,10 @@
       prefs: Object.assign({
         view: null,            // { type: 'chapter'|'detail', workId, chapterId }
         open: {},              // 展開中の作品
-        fontSize: 17, vertical: false, serif: false, theme: null, sidebar: true, preview: false
+        fontSize: 17, vertical: false, serif: false, theme: null, sidebar: true, preview: false,
+        workOrder: 'recent'    // 'recent'＝最終編集順 / 'manual'＝手動
       }, ls.get(PREF_KEY, {})),
-      sorting: null            // 並び替え中の作品ID
+      editing: false           // メニューの編集（並び替え）モード
     };
     const savePrefs = () => ls.set(PREF_KEY, state.prefs);
     const getWork = (id) => state.works.find((w) => w.id === id);
@@ -541,8 +573,14 @@
     let saveTimer = null;
     let cloudState = 'idle', lastSynced = null;
 
-    function touch(work) {
-      work.updated = Date.now();
+    const blocked = new Set(); // タイトル未入力のため保存を保留している作品
+    function touch(work, opts = {}) {
+      if (opts.content !== false) {
+        work.updated = Date.now();
+        // 最終編集順のときは編集した作品をメニューの一番上へ
+        const top = $('tree').querySelector('.work');
+        if (state.prefs.workOrder !== 'manual' && top && top.dataset.id !== work.id && hasTitle(work)) setTimeout(renderTree, 0);
+      }
       dirty.add(work.id);
       setSaveState('未保存…');
       clearTimeout(saveTimer);
@@ -556,7 +594,10 @@
       try {
         for (const id of ids) {
           const w = getWork(id);
-          if (w) { await DB.put(serialize(w)); markPending(id); }
+          if (!w) continue;
+          if (!isSavable(w)) { blocked.add(id); continue; }
+          blocked.delete(id);
+          await DB.put(serialize(w)); markSaved(w); markPending(id);
         }
         savePending();
         showCloudState();
@@ -570,7 +611,8 @@
       }
     }
     function serialize(w) {
-      return { ...w, chapters: w.chapters.map(({ _count, ...c }) => c) };
+      const { _savedTitle, ...rest } = w;
+      return { ...rest, chapters: w.chapters.map(({ _count, _savedTitle, ...c }) => c) };
     }
     function remoteData(w) {
       const { _remoteVer, ...rest } = serialize(w);
@@ -580,6 +622,8 @@
     function showCloudState(st) {
       if (st) cloudState = st;
       if (dirty.size) return setSaveState('未保存…');
+      const cw = current().work;
+      if (cw && blocked.has(cw.id)) return setSaveState(hasTitle(cw) ? '未保存（サブタイトルを入力してください）' : '未保存（作品名を入力してください）');
       const wait = pending.size || Object.keys(tombs).length;
       setSaveState(
         cloudState === 'syncing' ? '同期中…'
@@ -615,6 +659,7 @@
           if (dirty.has(id)) continue;
           const w = getWork(id);
           if (!w) { pending.delete(id); savePending(); continue; }
+          if (!isSavable(w)) continue; // タイトル未入力の間は送らない
           const g = gen[id];
           await pushWork(w);
           if (gen[id] === g) { pending.delete(id); savePending(); }
@@ -656,7 +701,7 @@
       // まだクラウドにない作品は送る
       for (const w of state.works) {
         if (w._remoteVer != null && !seen.has(w.id)) w._remoteVer = null;
-        if (w._remoteVer == null && !pending.has(w.id)) markPending(w.id);
+        if (w._remoteVer == null && !pending.has(w.id) && w._savedTitle && isSavable(w)) markPending(w.id);
       }
       savePending();
       if (need.length) refreshAfterRemote();
@@ -667,6 +712,7 @@
     }
     async function applyRemote(row) {
       const w = toWork(row);
+      markSaved(w);
       const i = state.works.findIndex((x) => x.id === w.id);
       if (i >= 0) state.works[i] = w; else state.works.push(w);
       await DB.put(serialize(w));
@@ -677,10 +723,9 @@
       refreshAfterRemote();
     }
     function refreshAfterRemote() {
-      state.works.sort((a, b) => b.created - a.created);
       // 本文を編集中ならカーソル位置を保つ
       const editing = document.activeElement === bodyEl ? [bodyEl.selectionStart, bodyEl.selectionEnd, $('view').scrollTop] : null;
-      if (!current().work) state.prefs.view = state.works[0] ? { type: 'detail', workId: state.works[0].id } : null;
+      if (!current().work) { const f = sortedWorks()[0]; state.prefs.view = f ? { type: 'detail', workId: f.id } : null; }
       if (state.prefs.view && state.prefs.view.type === 'chapter' && !current().chapter) state.prefs.view = { type: 'detail', workId: state.prefs.view.workId };
       render();
       if (editing && bodyEl && document.body.contains(bodyEl)) {
@@ -723,8 +768,9 @@
       if (!remote) { w._remoteVer = null; return pushWork(w); }
       if (remote.deleted) { w._remoteVer = remote.updated_at; return pushWork(w); } // 他端末で削除→この端末の版で復活
       const copy = { ...serialize(w), id: uid(), title: (w.title || '無題の作品') + '（この端末の版）', created: Date.now(), _remoteVer: null };
+      markSaved(copy);
       state.works.push(copy);
-      await DB.put(copy);
+      await DB.put(serialize(copy));
       await applyRemote(remote);
       await pushWork(copy);
       refreshAfterRemote();
@@ -732,21 +778,47 @@
     }
 
     // ===== データ操作 =====
-    function newChapter(w, title) {
-      const n = w.chapters.length + 1;
-      const c = { id: uid(), title: title || `第${n}話`, body: '', goal: 0, created: Date.now(), updated: Date.now(), _count: 0 };
+    const hasTitle = (x) => !!(x && (x.title || '').trim());
+    // 作品名と全サブタイトルが入力されている作品だけ保存する
+    const isSavable = (w) => hasTitle(w) && w.chapters.every(hasTitle);
+    function markSaved(w) {
+      w._savedTitle = w.title;
+      w.chapters.forEach((c) => { c._savedTitle = c.title; });
+    }
+    function newChapter(w) {
+      const c = { id: uid(), title: '', body: '', goal: 0, created: Date.now(), updated: Date.now(), _count: 0 };
       w.chapters.push(c);
       return c;
     }
     function createWork() {
-      const w = { id: uid(), title: '無題の作品', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now() };
-      newChapter(w);
-      state.works.unshift(w);
+      const orders = state.works.map((x) => x.order).filter((o) => typeof o === 'number');
+      const w = { id: uid(), title: '', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now(), order: orders.length ? Math.min(...orders) - 1 : 0 };
+      state.works.push(w);
       state.prefs.open[w.id] = true;
-      touch(w);
-      return w;
+      return w; // 作品名が入力されるまで保存しない
+    }
+    // 入力途中で離れた場合：未保存の空タイトルは元に戻すか破棄する
+    function cleanupDrafts(keep) {
+      for (const w of [...state.works]) {
+        const keepWork = keep && keep.workId === w.id;
+        let changed = false;
+        if (!hasTitle(w) && !(keepWork && keep.type === 'detail')) {
+          if (w._savedTitle) { w.title = w._savedTitle; changed = true; }
+          else { state.works = state.works.filter((x) => x !== w); dirty.delete(w.id); blocked.delete(w.id); continue; }
+        }
+        const n = w.chapters.length;
+        w.chapters = w.chapters.filter((c) => {
+          if (hasTitle(c) || (keepWork && keep.chapterId === c.id)) return true;
+          if (c._savedTitle) { c.title = c._savedTitle; changed = true; return true; }
+          return false;
+        });
+        if (w.chapters.length !== n) changed = true;
+        if (changed && blocked.has(w.id)) { blocked.delete(w.id); dirty.add(w.id); }
+      }
     }
     function navigate(view) {
+      if (!view || !state.prefs.view || view.workId !== state.prefs.view.workId || view.type !== 'detail') detailEditing = false;
+      cleanupDrafts(view);
       flush();
       state.prefs.view = view;
       if (view && view.workId) state.prefs.open[view.workId] = true;
@@ -754,92 +826,153 @@
       document.body.classList.remove('drawer');
       render();
     }
-
-    // ===== メニュー（階層） =====
-    function renderTree() {
-      const tree = $('tree');
-      tree.innerHTML = '';
-      const cur = current();
-      if (!state.works.length) {
-        tree.append(h('div', { class: 'empty-tree' }, '作品がありません。', h('br'), '「＋ 作品」から始めましょう。'));
-        return;
-      }
-      for (const w of state.works) {
-        const open = state.prefs.open[w.id] !== false; // 初期状態は展開
-        const sorting = state.sorting === w.id;
-        const t = workTotals(w);
-        const workEl = h('div', { class: 'work' + (open ? ' open' : '') + (sorting ? ' sorting' : '') });
-        const card = h('div', { class: 'work-card' });
-        workEl.append(card);
-        card.append(h('div', {
-          class: 'work-row' + (cur.work === w && cur.type === 'detail' ? ' active' : ''),
-          onclick: () => navigate({ type: 'detail', workId: w.id })
-        },
-          h('button', { class: 'twisty', 'aria-label': '開閉', onclick: (e) => { e.stopPropagation(); state.prefs.open[w.id] = !open; if (!state.prefs.open[w.id] && state.sorting === w.id) state.sorting = null; savePrefs(); renderTree(); } }, '▶'),
-          h('span', { class: 'work-name', title: w.title }, w.title || '無題の作品'),
-          h('span', { class: 'mini' + (t.goal && t.count >= t.goal ? ' done' : '') }, ratio(t.count, t.goal))
-        ));
-        const ul = h('ul', { class: 'chapters' });
-        w.chapters.forEach((c, i) => {
-          const done = c.goal && chCount(c) >= c.goal;
-          const li = h('li', {
-            class: 'ch-row' + (cur.chapter === c ? ' active' : ''),
-            'data-id': c.id,
-            onclick: () => { if (!sorting) navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); }
-          },
-            h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, w, li, ul) }, '≡'),
-            h('span', { class: 'ch-no' }, i + 1),
-            h('span', { class: 'ch-name' }, c.title || '（無題）'),
-            h('span', { class: 'mini' + (done ? ' done' : '') }, ratio(chCount(c), c.goal || 0)),
-            h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); move(w, i, -1); } }, '↑'),
-            h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); move(w, i, 1); } }, '↓')
-          );
-          ul.append(li);
-        });
-        card.append(ul);
-        workEl.append(h('div', { class: 'work-actions' },
-          h('button', { class: 'chip', onclick: () => { state.sorting = null; const c = newChapter(w); touch(w); navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); setTimeout(() => { const t = document.querySelector('.ch-title'); t && t.select(); }, 0); } }, '＋ サブタイトル'),
-          w.chapters.length > 1 ? h('button', { class: 'chip' + (sorting ? ' on' : ''), onclick: () => { state.sorting = sorting ? null : w.id; renderTree(); } }, sorting ? '並び替え完了' : '並び替え') : null
-        ));
-        tree.append(workEl);
-      }
+    function addChapter(w) {
+      if (!hasTitle(w)) { toast('先に作品名を入力してください'); return; }
+      state.editing = false;
+      const c = newChapter(w);
+      navigate({ type: 'chapter', workId: w.id, chapterId: c.id });
+      setTimeout(() => { const t = document.querySelector('.ch-title'); t && t.focus(); }, 0);
     }
-    function move(w, i, d) {
+
+    // ===== 作品の並び順 =====
+    function sortedWorks() {
+      const arr = state.works.slice();
+      if (state.prefs.workOrder === 'manual') {
+        arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (b.updated || 0) - (a.updated || 0));
+      } else {
+        arr.sort((a, b) => (b.updated || 0) - (a.updated || 0));
+      }
+      return arr;
+    }
+    function setWorkOrder(mode) {
+      if (state.prefs.workOrder === mode) return;
+      if (mode === 'manual') {
+        // 今の表示順をそのまま手動順の初期値にする（並び替えは編集扱いにしない）
+        sortedWorks().forEach((w, i) => { if (w.order !== i) { w.order = i; touch(w, { content: false }); } });
+      }
+      state.prefs.workOrder = mode;
+      savePrefs();
+      renderTree();
+    }
+    function moveWork(w, d) {
+      if (state.prefs.workOrder !== 'manual') setWorkOrder('manual');
+      const list = sortedWorks();
+      const i = list.indexOf(w), j = i + d;
+      if (j < 0 || j >= list.length) return;
+      list.splice(i, 1); list.splice(j, 0, w);
+      applyWorkOrder(list.map((x) => x.id));
+    }
+    function applyWorkOrder(ids) {
+      if (state.prefs.workOrder !== 'manual') setWorkOrder('manual');
+      const list = ids.map(getWork).filter(Boolean);
+      const i = list.findIndex((w, k) => sortedWorks()[k] !== w);
+      if (i < 0) { renderTree(); return; }
+      // 位置が変わった作品だけ、前後の間の値を振り直す
+      list.forEach((w, k) => {
+        const prev = list[k - 1], next = list[k + 1];
+        const okPrev = !prev || prev.order < w.order, okNext = !next || w.order < next.order;
+        if (okPrev && okNext) return;
+        const lo = prev ? prev.order : (next ? next.order - 2 : 0);
+        const hi = next && next.order > lo ? next.order : lo + 2;
+        w.order = (lo + hi) / 2;
+        touch(w, { content: false });
+      });
+      renderTree();
+    }
+    function moveChapter(w, i, d) {
       const j = i + d;
       if (j < 0 || j >= w.chapters.length) return;
       const [c] = w.chapters.splice(i, 1);
       w.chapters.splice(j, 0, c);
       touch(w); renderTree(); renderMainLight();
     }
-    function startDrag(e, w, li, ul) {
-      if (state.sorting !== w.id) return;
+    function applyChapterOrder(w, ids) {
+      const before = w.chapters.map((c) => c.id).join();
+      w.chapters.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+      if (before !== w.chapters.map((c) => c.id).join()) touch(w);
+      renderTree(); renderMainLight();
+    }
+
+    // ===== メニュー（階層） =====
+    function renderTree() {
+      const tree = $('tree');
+      tree.innerHTML = '';
+      tree.classList.toggle('editing', !!state.editing);
+      $('editBtn').textContent = state.editing ? '完了' : '編集';
+      $('editBtn').classList.toggle('on', !!state.editing);
+      document.querySelectorAll('#orderSeg button').forEach((b) => b.classList.toggle('on', b.dataset.order === (state.prefs.workOrder || 'recent')));
+      const cur = current();
+      const list = sortedWorks();
+      if (!list.length) {
+        tree.append(h('div', { class: 'empty-tree' }, '作品がありません。', h('br'), '「＋ 新規作品」から始めましょう。'));
+        return;
+      }
+      list.forEach((w, wi) => {
+        const open = state.prefs.open[w.id] !== false; // 初期状態は展開
+        const t = workTotals(w);
+        const workEl = h('div', { class: 'work' + (open ? ' open' : ''), 'data-id': w.id });
+        const card = h('div', { class: 'work-card' });
+        workEl.append(card);
+        card.append(h('div', {
+          class: 'work-row' + (cur.work === w && cur.type === 'detail' ? ' active' : ''),
+          onclick: () => { if (!state.editing) navigate({ type: 'detail', workId: w.id }); }
+        },
+          h('button', { class: 'twisty', 'aria-label': '開閉', onclick: (e) => { e.stopPropagation(); state.prefs.open[w.id] = !open; savePrefs(); renderTree(); } }, '▶'),
+          h('span', { class: 'work-name' + (hasTitle(w) ? '' : ' placeholder'), title: w.title }, hasTitle(w) ? w.title : '（作品名を入力）'),
+          h('span', { class: 'mini' }, ratio(t.count, t.goal)),
+          h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); moveWork(w, -1); } }, '↑'),
+          h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); moveWork(w, 1); } }, '↓'),
+          h('button', { class: 'handle', 'aria-label': 'ドラッグで作品を並び替え', onpointerdown: (e) => startDrag(e, workEl, tree, (ids) => applyWorkOrder(ids)) }, '≡')
+        ));
+        if (t.goal && t.count >= t.goal) card.querySelector('.work-row .mini').classList.add('done');
+        const ul = h('ul', { class: 'chapters' });
+        w.chapters.forEach((c, i) => {
+          const done = c.goal && chCount(c) >= c.goal;
+          const li = h('li', {
+            class: 'ch-row' + (cur.chapter === c ? ' active' : ''),
+            'data-id': c.id,
+            onclick: () => { if (!state.editing) navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); }
+          },
+            h('span', { class: 'ch-no' }, i + 1),
+            h('span', { class: 'ch-name' + (hasTitle(c) ? '' : ' placeholder') }, hasTitle(c) ? c.title : '（サブタイトルを入力）'),
+            h('span', { class: 'mini' + (done ? ' done' : '') }, ratio(chCount(c), c.goal || 0)),
+            h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); moveChapter(w, i, -1); } }, '↑'),
+            h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); moveChapter(w, i, 1); } }, '↓'),
+            h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, li, ul, (ids) => applyChapterOrder(w, ids)) }, '≡')
+          );
+          ul.append(li);
+        });
+        card.append(ul);
+        workEl.append(h('div', { class: 'work-actions' },
+          hasTitle(w) ? h('button', { class: 'chip', onclick: () => addChapter(w) }, '＋ サブタイトル') : null));
+        tree.append(workEl);
+      });
+    }
+    // ドラッグで並び替え（メニュー・作品詳細で共通）
+    function startDrag(e, item, container, onDrop) {
       e.preventDefault(); e.stopPropagation();
       const pid = e.pointerId;
-      li.classList.add('dragging');
+      item.classList.add('dragging');
       const onMove = (ev) => {
         if (ev.pointerId !== pid) return;
         ev.preventDefault();
         const y = ev.clientY;
-        const others = [...ul.children].filter((x) => x !== li);
+        const others = [...container.children].filter((x) => x !== item && x.dataset.id);
         let before = null;
         for (const o of others) {
           const r = o.getBoundingClientRect();
           if (y < r.top + r.height / 2) { before = o; break; }
         }
-        if (before) { if (li.nextSibling !== before) ul.insertBefore(li, before); }
-        else if (ul.lastChild !== li) ul.append(li);
+        if (before) { if (item.nextSibling !== before) container.insertBefore(item, before); }
+        else if (others.length && others[others.length - 1].nextSibling !== item) others[others.length - 1].after(item);
       };
       const onUp = (ev) => {
         if (ev.pointerId !== pid) return;
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         window.removeEventListener('pointercancel', onUp);
-        li.classList.remove('dragging');
-        const order = [...ul.children].map((x) => x.dataset.id);
-        const before = w.chapters.map((c) => c.id).join();
-        w.chapters.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-        if (before !== w.chapters.map((c) => c.id).join()) touch(w);
-        renderTree(); renderMainLight();
+        item.classList.remove('dragging');
+        onDrop([...container.children].map((x) => x.dataset.id).filter(Boolean));
       };
       // 行をDOM上で動かすとポインタキャプチャが外れるため window で受け取る
       window.addEventListener('pointermove', onMove, { passive: false });
@@ -869,9 +1002,9 @@
       c.innerHTML = '';
       if (!work) { c.append(h('b', {}, 'のべるん')); return; }
       if (chapter) {
-        c.append(h('a', { onclick: () => navigate({ type: 'detail', workId: work.id }) }, '‹ ' + (work.title || '無題の作品')), h('b', {}, chapter.title || '（無題）'));
+        c.append(h('a', { onclick: () => navigate({ type: 'detail', workId: work.id }) }, '‹ ' + (work.title || '作品')), h('b', {}, hasTitle(chapter) ? chapter.title : '新しいサブタイトル'));
       } else {
-        c.append(h('b', {}, '作品詳細'));
+        c.append(h('b', {}, hasTitle(work) || work._savedTitle ? '作品詳細' : '新しい作品'));
       }
     }
     // 並び替えなどで番号だけ変わったときの軽い更新
@@ -895,7 +1028,7 @@
       if (!cur.work) {
         view.append(h('div', { class: 'empty-view' },
           h('div', {}, state.works.length ? 'メニューから作品かサブタイトルを選んでください' : 'まずは作品を作りましょう'),
-          h('button', { class: 'btn-primary', onclick: () => { const w = createWork(); navigate({ type: 'chapter', workId: w.id, chapterId: w.chapters[0].id }); } }, '＋ 新しい作品')
+          h('button', { class: 'btn-primary', onclick: () => $('newWorkBtn').click() }, '＋ 新しい作品')
         ));
         return;
       }
@@ -907,8 +1040,8 @@
     let bodyEl = null;
     function renderEditor(view, work, ch) {
       const titleEl = h('input', {
-        class: 'ch-title', type: 'text', value: ch.title, placeholder: 'サブタイトル', maxlength: '100',
-        oninput: (e) => { ch.title = e.target.value; ch.updated = Date.now(); touch(work); renderCrumb(); updateTreeRow(work, ch); },
+        class: 'ch-title', type: 'text', value: ch.title, placeholder: 'サブタイトル（必須）', maxlength: '100',
+        oninput: (e) => { ch.title = e.target.value; ch.updated = Date.now(); touch(work); renderCrumb(); updateTreeRow(work, ch); lockBody(); },
         onkeydown: (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bodyEl && bodyEl.focus(); } }
       });
       const goalEl = h('input', {
@@ -920,11 +1053,17 @@
         oninput: () => onBodyInput(work, ch)
       });
       bodyEl.value = ch.body;
+      // サブタイトルが未入力の間は本文を書けない（保存できないため）
+      const lockBody = () => {
+        const locked = !hasTitle(ch);
+        bodyEl.disabled = locked;
+        bodyEl.placeholder = locked ? 'サブタイトルを入力すると本文を書けます' : '本文を書きましょう…\nルビ：｜漢字《かんじ》';
+      };
+      lockBody();
       const preview = h('div', { class: 'preview' });
       const ed = h('div', { class: 'editor' },
         h('div', { class: 'ch-head' }, titleEl, h('label', { class: 'goal-field' }, '目標', goalEl, '字')),
-        state.prefs.preview ? preview : bodyEl,
-        h('div', { class: 'ch-foot' }, h('button', { class: 'danger-link', onclick: () => deleteChapter(work, ch) }, 'このサブタイトルを削除'))
+        state.prefs.preview ? preview : bodyEl
       );
       if (state.prefs.preview) renderPreview(preview, ch.body);
       view.append(ed);
@@ -944,7 +1083,9 @@
     function updateTreeRow(work, ch) {
       const row = document.querySelector(`.ch-row[data-id="${ch.id}"]`);
       if (row) {
-        row.querySelector('.ch-name').textContent = ch.title || '（無題）';
+        const nm = row.querySelector('.ch-name');
+        nm.textContent = hasTitle(ch) ? ch.title : '（サブタイトルを入力）';
+        nm.classList.toggle('placeholder', !hasTitle(ch));
         const m = row.querySelector('.mini');
         m.textContent = ratio(chCount(ch), ch.goal || 0);
         m.classList.toggle('done', !!ch.goal && chCount(ch) >= ch.goal);
@@ -957,12 +1098,11 @@
       }
     }
     function deleteChapter(work, ch) {
-      if (!confirm(`「${ch.title || '無題'}」を削除しますか？\n本文も削除され、元に戻せません。`)) return;
-      const i = work.chapters.indexOf(ch);
-      work.chapters.splice(i, 1);
+      if (!confirm(`「${ch.title || '（未入力）'}」を削除しますか？\n本文も削除され、元に戻せません。`)) return;
+      work.chapters.splice(work.chapters.indexOf(ch), 1);
       touch(work);
-      const next = work.chapters[Math.min(i, work.chapters.length - 1)];
-      navigate(next ? { type: 'chapter', workId: work.id, chapterId: next.id } : { type: 'detail', workId: work.id });
+      if (!work.chapters.length) detailEditing = false;
+      render();
       toast('削除しました');
     }
 
@@ -1031,13 +1171,24 @@
     }
 
     // --- 作品詳細 ---
+    let detailEditing = false;
     function renderDetail(view, work) {
       const t = workTotals(work);
       const coverBox = h('div', { class: 'cover' + (work.cover ? ' has-img' : ''), onclick: () => $('coverFile').click(), title: '表紙画像を選択' },
         work.cover ? h('img', { src: work.cover, alt: '表紙' }) : h('span', {}, 'タップして', h('br'), '表紙画像を設定'));
+      const addBtn = h('button', { class: 'group-btn', style: 'border-top:0.5px solid var(--line)', onclick: () => addChapter(work) }, '＋ サブタイトルを追加');
+      const note = h('div', { class: 'section-note warn' });
+      const syncTitleState = () => {
+        addBtn.disabled = !hasTitle(work);
+        note.textContent = hasTitle(work) ? '' : '作品名を入力すると保存されます';
+      };
       const titleIn = h('input', {
-        class: 'work-title-input', type: 'text', value: work.title, placeholder: '作品名', maxlength: '100',
-        oninput: (e) => { work.title = e.target.value; touch(work); renderCrumb(); const n = document.querySelector('.work-row.active .work-name'); if (n) n.textContent = work.title || '無題の作品'; }
+        class: 'work-title-input', type: 'text', value: work.title, placeholder: '作品名（必須）', maxlength: '100',
+        oninput: (e) => {
+          work.title = e.target.value; touch(work); renderCrumb(); syncTitleState();
+          const n = document.querySelector(`.work[data-id="${work.id}"] .work-name`);
+          if (n) { n.textContent = hasTitle(work) ? work.title : '（作品名を入力）'; n.classList.toggle('placeholder', !hasTitle(work)); }
+        }
       });
       const syn = h('textarea', {
         class: 'synopsis', placeholder: 'あらすじを入力…',
@@ -1045,17 +1196,27 @@
       });
       syn.value = work.synopsis || '';
 
-      const rows = work.chapters.map((c, i) => {
+      const tbody = h('tbody', {});
+      work.chapters.forEach((c, i) => {
         const goalIn = h('input', {
           type: 'number', min: '0', step: '100', inputmode: 'numeric', placeholder: '0', value: c.goal ? String(c.goal) : '',
           onclick: (e) => e.stopPropagation(),
           oninput: (e) => { c.goal = Math.max(0, parseInt(e.target.value, 10) || 0); touch(work); refreshTotals(); }
         });
-        return h('tr', { class: 'link', onclick: () => navigate({ type: 'chapter', workId: work.id, chapterId: c.id }) },
-          h('td', {}, `${i + 1}. ${c.title || '（無題）'}`),
+        const tr = h('tr', { class: detailEditing ? '' : 'link', 'data-id': c.id, onclick: () => { if (!detailEditing) navigate({ type: 'chapter', workId: work.id, chapterId: c.id }); } },
+          h('td', {},
+            detailEditing ? h('button', { class: 'del-btn', 'aria-label': '削除', onclick: (e) => { e.stopPropagation(); deleteChapter(work, c); } }, '−') : null,
+            h('span', { class: hasTitle(c) ? '' : 'placeholder' }, hasTitle(c) ? c.title : '（未入力）')),
           h('td', { class: 'num' }, fmt(chCount(c))),
-          h('td', {}, goalIn));
+          h('td', {}, detailEditing
+            ? h('span', { class: 'row-tools' },
+                h('button', { class: 'mv', 'aria-label': '上へ', onclick: (e) => { e.stopPropagation(); moveChapter(work, i, -1); } }, '↑'),
+                h('button', { class: 'mv', 'aria-label': '下へ', onclick: (e) => { e.stopPropagation(); moveChapter(work, i, 1); } }, '↓'),
+                h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, tr, tbody, (ids) => applyChapterOrder(work, ids)) }, '≡'))
+            : goalIn));
+        tbody.append(tr);
       });
+      if (!work.chapters.length) tbody.append(h('tr', {}, h('td', { colspan: '3', class: 'num' }, 'サブタイトルがありません')));
       const totalCount = h('td', {}, fmt(t.count)), totalGoal = h('td', {}, fmt(t.goal));
       function refreshTotals() {
         const tt = workTotals(work);
@@ -1065,7 +1226,7 @@
 
       const d = new Date(work.created);
       view.classList.add('grouped');
-      view.append(h('div', { class: 'detail' },
+      view.append(h('div', { class: 'detail' + (detailEditing ? ' editing' : '') },
         h('div', { class: 'cover-wrap' },
           coverBox,
           h('div', { class: 'cover-actions' },
@@ -1073,20 +1234,23 @@
             work.cover ? h('button', { class: 'text-btn danger', onclick: () => { if (confirm('表紙画像を削除しますか？')) { work.cover = ''; touch(work); renderView(); } } }, '削除') : null)),
         h('div', { class: 'section-label' }, '作品名'),
         h('div', { class: 'group' }, titleIn),
+        note,
         h('div', { class: 'section-label' }, 'あらすじ'),
         h('div', { class: 'group' }, syn),
-        h('div', { class: 'section-label' }, '目標文字数'),
+        h('div', { class: 'section-label with-btn' }, h('span', {}, 'サブタイトルと目標文字数'),
+          work.chapters.length ? h('button', { class: 'text-btn', onclick: () => { detailEditing = !detailEditing; renderView(); } }, detailEditing ? '完了' : '並び替え・削除') : null),
         h('div', { class: 'group' },
           h('table', { class: 'goals' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, '目標'))),
-            h('tbody', {}, rows.length ? rows : h('tr', {}, h('td', { colspan: '3' }, 'サブタイトルがありません'))),
-            h('tfoot', {}, h('tr', {}, h('td', {}, '合計'), totalCount, totalGoal))),
-          h('button', { class: 'group-btn', style: 'border-top:0.5px solid var(--line)', onclick: () => { const c = newChapter(work); touch(work); navigate({ type: 'chapter', workId: work.id, chapterId: c.id }); } }, '＋ サブタイトルを追加')),
+            h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, detailEditing ? '並び替え' : '目標'))),
+            tbody,
+            h('tfoot', {}, h('tr', {}, h('td', {}, '合計'), totalCount, detailEditing ? h('td', {}) : totalGoal))),
+          detailEditing ? null : addBtn),
         h('div', { class: 'section-note' }, '作品の目標は、サブタイトルごとの目標の合計です。文字数はルビ記法・空白・改行を除いて数えます。'),
-        h('div', { class: 'group', style: 'margin-top:32px' },
-          h('button', { class: 'group-btn danger', onclick: () => deleteWork(work) }, 'この作品を削除')),
+        work._savedTitle ? h('div', { class: 'group', style: 'margin-top:32px' },
+          h('button', { class: 'group-btn danger', onclick: () => deleteWork(work) }, 'この作品を削除')) : null,
         h('div', { class: 'section-note center' }, `作成日 ${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}・全${work.chapters.length}話`)
       ));
+      syncTitleState();
     }
     async function deleteWork(work) {
       if (!confirm(`作品「${work.title || '無題'}」を削除しますか？\nすべてのサブタイトルと本文が削除され、元に戻せません。`)) return;
@@ -1165,10 +1329,13 @@
     $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
     $('scrim').addEventListener('click', () => document.body.classList.remove('drawer'));
     $('newWorkBtn').addEventListener('click', () => {
+      state.editing = false; detailEditing = false;
       const w = createWork();
-      navigate({ type: 'detail', workId: w.id });
-      setTimeout(() => { const t = document.querySelector('.work-title-input'); if (t) { t.focus(); t.select(); } }, 0);
+      navigate({ type: 'detail', workId: w.id }); // 新規作品は作品詳細から始める
+      setTimeout(() => { const t = document.querySelector('.work-title-input'); if (t) t.focus(); }, 0);
     });
+    $('editBtn').addEventListener('click', () => { state.editing = !state.editing; renderTree(); });
+    document.querySelectorAll('#orderSeg button').forEach((b) => b.addEventListener('click', () => setWorkOrder(b.dataset.order)));
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on'); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush().then(() => sync()); }
@@ -1196,6 +1363,7 @@
           if (!w.id || !Array.isArray(w.chapters)) continue;
           const i = state.works.findIndex((x) => x.id === w.id);
           const restored = { ...w, _remoteVer: i >= 0 ? state.works[i]._remoteVer : null };
+          markSaved(restored);
           if (i >= 0) state.works[i] = restored; else state.works.push(restored);
           dirty.add(w.id);
         }
@@ -1239,17 +1407,17 @@
       $('app').hidden = false;
       await DB.open();
       try { state.works = (await DB.all()) || []; } catch { state.works = []; }
-      state.works.sort((a, b) => b.created - a.created);
+      state.works.forEach(markSaved);
       // 旧バージョン（単純なメモ形式）の文書を取り込む
       const legacy = ls.get('writing-app:docs:v1', null);
       if (Array.isArray(legacy) && legacy.some((d) => (d.body || d.title || '').trim()) && !ls.get('novel:migrated', false)) {
         const w = { id: uid(), title: '以前の文書', synopsis: '', cover: '', chapters: [], created: Date.now(), updated: Date.now() };
         legacy.filter((d) => (d.body || d.title || '').trim()).forEach((d) => w.chapters.push({ id: uid(), title: d.title || '無題', body: d.body || '', goal: d.goal || 0, created: d.created || Date.now(), updated: d.updated || Date.now() }));
-        state.works.unshift(w); dirty.add(w.id);
+        state.works.push(w); dirty.add(w.id);
         ls.set('novel:migrated', true);
         await flush();
       }
-      if (!current().work) state.prefs.view = state.works[0] ? { type: 'detail', workId: state.works[0].id } : null;
+      if (!current().work) { const f = sortedWorks()[0]; state.prefs.view = f ? { type: 'detail', workId: f.id } : null; }
       if (state.prefs.view && state.prefs.view.type === 'chapter' && !current().chapter) state.prefs.view = { type: 'detail', workId: state.prefs.view.workId };
       render();
       renderAccount();
