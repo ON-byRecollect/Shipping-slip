@@ -1361,16 +1361,18 @@
       if (!isTyping() && (window.scrollY || window.scrollX)) window.scrollTo(0, 0);
       let h = vv ? vv.height : window.innerHeight;
       let keyboard = isTyping();
-      // iOS のホーム画面アプリでは、縦→横の回転後に報告される高さが短いまま残る不具合がある。
-      // 全画面表示のときは端末の画面サイズ（回転の影響を受けない）から本来の高さを求める
+      // iOS のホーム画面アプリでは、回転後に報告される高さが短いまま残る不具合がある。
+      // 同じ向き・同じ幅で一度でも見えた正しい高さを覚えておき、短い値が来たらそれを使う
       if (isIOSStandalone()) {
-        const sw = Math.min(screen.width, screen.height), sh = Math.max(screen.width, screen.height);
         const land = window.matchMedia ? matchMedia('(orientation: landscape)').matches : window.innerWidth > window.innerHeight;
-        const fullW = land ? sh : sw, fullH = land ? sw : sh;
-        // 分割表示など画面の一部だけを使っているときは使わない（回転直後の値の揺れは許容）
-        if (window.innerWidth >= fullW * 0.9) {
-          keyboard = keyboard && fullH - h > 150;          // 本当にキーボードが開いているか
-          if (!keyboard) h = Math.max(h, fullH);
+        const key = 'noverun:vh:' + (land ? 'L' : 'P') + ':' + Math.round(window.innerWidth);
+        const known = ls.get(key, 0);
+        if (keyboard) {
+          keyboard = !known || known - h > 150; // 本当にキーボードが開いているか
+        }
+        if (!keyboard) {
+          if (h > known) ls.set(key, Math.round(h));
+          else if (known - h <= 200) h = known; // 回転で短くなった分を補う
         }
       }
       const top = vv && keyboard ? vv.offsetTop : 0;
