@@ -66,6 +66,8 @@
     .gate-icon { width: 88px; height: 88px; border-radius: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); margin-bottom: 18px; }
     .gate-box h1 { font-size: 28px; font-weight: 700; margin: 0 0 6px; color: var(--ink-strong); letter-spacing: 0.02em; }
     .gate-box p { font-size: 13px; color: var(--muted); margin: 0 0 28px; }
+    .gate-box input + input { margin-top: 10px; }
+    .gate-box button:disabled { opacity: 0.5; }
     .gate-box input { width: 100%; padding: 14px 16px; border: none; border-radius: 12px; font-size: 17px; background: var(--panel); outline: none; text-align: center; }
     .gate-box button { width: 100%; margin-top: 12px; padding: 15px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; font-size: 17px; }
     .gate-err { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 12px; }
@@ -108,6 +110,11 @@
     .chip { color: var(--accent); font-size: 15px; padding: 4px 6px; }
     .chip.on { font-weight: 600; }
     .empty-tree { color: var(--muted); font-size: 15px; text-align: center; padding: 40px 10px; line-height: 1.8; }
+    .account { border-top: 0.5px solid var(--line); padding: 10px 16px 0 20px; display: flex; align-items: center; gap: 8px; }
+    .account-info { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .account-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #accountEmail { color: var(--ink); font-size: 13px; }
+    .account + .side-foot { border-top: none; }
     .side-foot { border-top: 0.5px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 14px; }
 
     /* ---------- メイン ---------- */
@@ -248,11 +255,12 @@
 <body>
   <!-- ログイン -->
   <div class="gate" id="gate" hidden>
-    <form class="gate-box" id="gateForm" autocomplete="off">
+    <form class="gate-box" id="gateForm">
       <img class="gate-icon" src="noverun-icon.png" alt="">
       <h1>のべるん</h1>
-      <p>この端末で初めて使うときだけパスワードが必要です</p>
-      <input id="gateInput" type="password" placeholder="パスワード" autocomplete="current-password" required>
+      <p id="gateMsg">一度ログインした端末では、次回から入力は不要です</p>
+      <input id="gateEmail" type="email" placeholder="メールアドレス" autocomplete="username" inputmode="email" autocapitalize="off" required>
+      <input id="gatePass" type="password" placeholder="パスワード" autocomplete="current-password" required>
       <button type="submit">ログイン</button>
       <div class="gate-err" id="gateErr"></div>
     </form>
@@ -265,9 +273,14 @@
         <button class="add-btn" id="newWorkBtn">＋ 新規作品</button>
       </div>
       <div class="tree" id="tree"></div>
+      <div class="account">
+        <div class="account-info"><span id="accountEmail"></span><span id="syncState"></span></div>
+        <button class="chip" id="syncBtn" title="今すぐ同期">同期</button>
+      </div>
       <div class="side-foot">
         <button class="chip" id="backupBtn" title="全作品をファイルに保存">バックアップ</button>
         <button class="chip" id="restoreBtn" title="バックアップファイルから復元">復元</button>
+        <button class="chip" id="logoutBtn" style="margin-left:auto;color:var(--danger)">ログアウト</button>
         <input type="file" id="restoreFile" accept="application/json,.json" hidden>
       </div>
     </aside>
@@ -312,17 +325,22 @@
   (() => {
     'use strict';
     // ===== 設定 =====
-    // パスワードを変える場合：SHA-256('novel-writer:v1:' + 新パスワード) の16進文字列に置き換える
-    const PASS_HASH = '6b3c2cc7e2df209889c85d60f1142e5a6d82ae5f42722cfa7440d583e67cc738';
-    const PASS_SALT = 'novel-writer:v1:';
-    const AUTH_KEY = 'novel:auth';
+    const SUPABASE_URL = 'https://olnbxdfqzjjnigjlsazj.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbmJ4ZGZxempqbmlnamxzYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODIzMTIsImV4cCI6MjA4ODc1ODMxMn0.-jHkjLFBsdyWMzp7qm2DbzbacNasCh3z3On1OfDlPjo'; // 公開用 anon キー（データは RLS で本人のみに制限）
+    const TABLE = 'novel_works';
+    const SESSION_KEY = 'noverun:session';
+    const OWNER_KEY = 'noverun:owner';
+    const PENDING_KEY = 'noverun:pending';
+    const TOMBS_KEY = 'noverun:tombs';
     const PREF_KEY = 'novel:prefs';
-    const SAVE_DELAY = 1500; // 入力が止まってから保存するまで（ミリ秒）
+    const SAVE_DELAY = 1500;   // 入力が止まってから保存するまで（ミリ秒）
+    const SYNC_INTERVAL = 45000; // 他の端末の変更を取りにいく間隔（ミリ秒）
 
     const $ = (id) => document.getElementById(id);
     const ls = {
       get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
-      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+      del(k) { try { localStorage.removeItem(k); } catch {} }
     };
     function h(tag, attrs, ...kids) {
       const el = document.createElement(tag);
@@ -339,49 +357,109 @@
     const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     const fmt = (n) => Number(n || 0).toLocaleString('ja-JP');
     const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const hhmm = (d = new Date()) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
     let toastTimer;
-    function toast(msg) {
+    function toast(msg, ms = 1800) {
       const t = $('toast'); t.textContent = msg; t.classList.add('show');
-      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
     }
 
-    // ===== 認証（端末ごとに一度だけ） =====
-    async function sha256(s) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    }
-    function isAuthed() {
-      if (ls.get(AUTH_KEY, null) === PASS_HASH) return true;
-      return document.cookie.split('; ').some((c) => c === 'novel_auth=' + PASS_HASH.slice(0, 32));
-    }
-    function rememberDevice() {
-      ls.set(AUTH_KEY, PASS_HASH);
-      try {
-        document.cookie = 'novel_auth=' + PASS_HASH.slice(0, 32) + '; max-age=315360000; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
-      } catch {}
-      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    }
-    function showGate() {
-      $('gate').hidden = false;
-      $('gateInput').focus();
-      $('gateForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        try {
-          const hash = await sha256(PASS_SALT + $('gateInput').value);
-          if (hash === PASS_HASH) {
-            rememberDevice();
-            $('gate').hidden = true;
-            start();
-          } else {
-            $('gateErr').textContent = 'パスワードが違います';
-            $('gateInput').select();
-          }
-        } catch {
-          $('gateErr').textContent = 'このブラウザでは認証できません（https で開いてください）';
+    // ===== クラウド（Supabase：認証と保存） =====
+    const authError = () => Object.assign(new Error('auth'), { auth: true });
+    const Cloud = {
+      session: ls.get(SESSION_KEY, null),
+      refreshing: null,
+      headers(extra) { return { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', ...extra }; },
+      setSession(j) {
+        this.session = {
+          access_token: j.access_token,
+          refresh_token: j.refresh_token,
+          expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600),
+          user_id: (j.user && j.user.id) || (this.session && this.session.user_id),
+          email: (j.user && j.user.email) || (this.session && this.session.email)
+        };
+        ls.set(SESSION_KEY, this.session);
+      },
+      async signIn(email, password) {
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST', headers: this.headers(), body: JSON.stringify({ email, password })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw Object.assign(new Error(j.error_description || j.msg || 'login'), { status: r.status, code: j.error_code || j.error });
+        this.setSession(j);
+      },
+      refresh() {
+        if (!this.session) return Promise.reject(authError());
+        if (!this.refreshing) {
+          this.refreshing = (async () => {
+            // 別タブが先に更新していればそれを使う
+            const latest = ls.get(SESSION_KEY, null);
+            if (latest && latest.refresh_token !== this.session.refresh_token && latest.expires_at - 60 > Date.now() / 1000) { this.session = latest; return; }
+            const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+              method: 'POST', headers: this.headers(), body: JSON.stringify({ refresh_token: this.session.refresh_token })
+            });
+            if (r.status >= 400 && r.status < 500) throw authError();
+            if (!r.ok) throw new Error('network');
+            this.setSession(await r.json());
+          })().finally(() => { this.refreshing = null; });
         }
-      });
+        return this.refreshing;
+      },
+      async token() {
+        if (!this.session) throw authError();
+        if (this.session.expires_at - 60 < Date.now() / 1000) await this.refresh();
+        return this.session.access_token;
+      },
+      async rest(path, opts = {}, retry = true) {
+        const t = await this.token();
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: this.headers({ Authorization: 'Bearer ' + t, ...(opts.headers || {}) }) });
+        if (r.status === 401 && retry) { await this.refresh(); return this.rest(path, opts, false); }
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          throw Object.assign(new Error(j.message || 'HTTP ' + r.status), { status: r.status, code: j.code });
+        }
+        const text = await r.text();
+        return text ? JSON.parse(text) : null;
+      },
+      signOut() {
+        const s = this.session;
+        this.session = null;
+        ls.del(SESSION_KEY);
+        if (s) fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: 'POST', headers: this.headers({ Authorization: 'Bearer ' + s.access_token }) }).catch(() => {});
+      }
+    };
+
+    // ===== ログイン（端末ごとに一度だけ。以降はセッションを自動更新） =====
+    let started = false;
+    function showLogin(reauth) {
+      $('gate').hidden = false;
+      $('gateMsg').textContent = reauth ? 'ログインの有効期限が切れました。もう一度ログインしてください' : '一度ログインした端末では、次回から入力は不要です';
+      if (Cloud.session && Cloud.session.email) $('gateEmail').value = Cloud.session.email;
+      ($('gateEmail').value ? $('gatePass') : $('gateEmail')).focus();
     }
+    $('gateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = $('gateForm').querySelector('button');
+      btn.disabled = true; $('gateErr').textContent = '';
+      try {
+        await Cloud.signIn($('gateEmail').value.trim(), $('gatePass').value);
+        $('gatePass').value = '';
+        // 別のアカウントでログインした場合は、この端末に残っている前の人のデータを消す
+        const owner = ls.get(OWNER_KEY, null);
+        if (owner && owner !== Cloud.session.user_id) await clearLocalData();
+        ls.set(OWNER_KEY, Cloud.session.user_id);
+        $('gate').hidden = true;
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+        if (!started) start(); else { renderAccount(); sync(); }
+      } catch (err) {
+        $('gateErr').textContent =
+          err.code === 'invalid_credentials' || err.status === 400 ? 'メールアドレスかパスワードが違います'
+          : err.code === 'email_not_confirmed' ? 'メールアドレスの確認が済んでいません'
+          : err instanceof TypeError ? 'サーバーに接続できません。通信状態を確認してください'
+          : 'ログインできませんでした（' + err.message + '）';
+      } finally { btn.disabled = false; }
+    });
 
     // ===== 保存先（IndexedDB、使えなければ localStorage） =====
     const DB = {
@@ -408,7 +486,8 @@
       },
       async all() { return this.db ? this.req('readonly', (s) => s.getAll()) : ls.get('novel:works', []); },
       async put(w) { if (this.db) return this.req('readwrite', (s) => s.put(w)); if (!ls.set('novel:works', state.works)) throw new Error('quota'); },
-      async del(id) { if (this.db) return this.req('readwrite', (s) => s.delete(id)); ls.set('novel:works', state.works); }
+      async del(id) { if (this.db) return this.req('readwrite', (s) => s.delete(id)); ls.set('novel:works', state.works); },
+      async clear() { if (this.db) return this.req('readwrite', (s) => s.clear()); ls.del('novel:works'); }
     };
 
     // ===== 状態 =====
@@ -452,9 +531,16 @@
     const workTotals = (w) => w.chapters.reduce((a, c) => ({ count: a.count + chCount(c), goal: a.goal + (Number(c.goal) || 0) }), { count: 0, goal: 0 });
     const ratio = (n, g) => `${fmt(n)}/${fmt(g)}`;
 
-    // ===== 自動保存（入力が止まってから一定時間後） =====
-    const dirty = new Set();
+    // ===== 自動保存（入力が止まってから一定時間後）→ 端末に保存 → クラウドへ同期 =====
+    const dirty = new Set();                         // 端末にまだ保存していない作品
+    const pending = new Set(ls.get(PENDING_KEY, [])); // クラウドにまだ送っていない作品
+    const tombs = ls.get(TOMBS_KEY, {});             // 削除した作品 { id: クラウド上のバージョン }
+    const gen = {};                                  // 送信中に再編集されたかの判定用
+    const savePending = () => ls.set(PENDING_KEY, [...pending]);
+    const saveTombs = () => ls.set(TOMBS_KEY, tombs);
     let saveTimer = null;
+    let cloudState = 'idle', lastSynced = null;
+
     function touch(work) {
       work.updated = Date.now();
       dirty.add(work.id);
@@ -462,18 +548,19 @@
       clearTimeout(saveTimer);
       saveTimer = setTimeout(flush, SAVE_DELAY);
     }
+    function markPending(id) { pending.add(id); gen[id] = (gen[id] || 0) + 1; }
     async function flush() {
       clearTimeout(saveTimer); saveTimer = null;
       if (!dirty.size) return true;
       const ids = [...dirty]; dirty.clear();
-      setSaveState('保存中…');
       try {
         for (const id of ids) {
           const w = getWork(id);
-          if (w) await DB.put(serialize(w));
+          if (w) { await DB.put(serialize(w)); markPending(id); }
         }
-        const d = new Date();
-        setSaveState(`保存済み ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+        savePending();
+        showCloudState();
+        sync({ pull: false });
         return true;
       } catch (e) {
         ids.forEach((id) => dirty.add(id));
@@ -485,12 +572,164 @@
     function serialize(w) {
       return { ...w, chapters: w.chapters.map(({ _count, ...c }) => c) };
     }
-    const setSaveState = (t) => { $('saveState').textContent = t; };
+    function remoteData(w) {
+      const { _remoteVer, ...rest } = serialize(w);
+      return rest;
+    }
+    const setSaveState = (t) => { $('saveState').textContent = t; const s = $('syncState'); if (s) s.textContent = t; };
+    function showCloudState(st) {
+      if (st) cloudState = st;
+      if (dirty.size) return setSaveState('未保存…');
+      const wait = pending.size || Object.keys(tombs).length;
+      setSaveState(
+        cloudState === 'syncing' ? '同期中…'
+        : cloudState === 'offline' ? (wait ? 'オフライン・端末に保存済み' : 'オフライン')
+        : cloudState === 'notable' ? '⚠ クラウド未設定・端末に保存済み'
+        : cloudState === 'auth' ? '⚠ 要ログイン・端末に保存済み'
+        : wait ? '端末に保存済み'
+        : lastSynced ? `☁ 同期済み ${hhmm(lastSynced)}` : '☁ 同期済み');
+    }
     window.addEventListener('pagehide', () => { flush(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); else sync(); });
+    window.addEventListener('focus', () => sync());
+    window.addEventListener('online', () => sync());
     window.addEventListener('beforeunload', (e) => {
       if (dirty.size) { flush(); e.preventDefault(); e.returnValue = ''; }
     });
+    setInterval(() => { if (!document.hidden && !dirty.size) sync(); }, SYNC_INTERVAL);
+
+    let syncing = false, syncAgain = null;
+    async function sync(opts = {}) {
+      if (!started || !Cloud.session || cloudState === 'notable') return;
+      if (syncing) { syncAgain = { pull: (syncAgain && syncAgain.pull) || opts.pull !== false }; return; }
+      syncing = true;
+      showCloudState('syncing');
+      try {
+        if (opts.pull !== false) await pull();
+        for (const id of Object.keys(tombs)) {
+          await pushDelete(id, tombs[id]);
+          delete tombs[id]; saveTombs();
+          pending.delete(id); savePending();
+        }
+        for (const id of [...pending]) {
+          if (dirty.has(id)) continue;
+          const w = getWork(id);
+          if (!w) { pending.delete(id); savePending(); continue; }
+          const g = gen[id];
+          await pushWork(w);
+          if (gen[id] === g) { pending.delete(id); savePending(); }
+        }
+        lastSynced = new Date();
+        showCloudState('ok');
+      } catch (e) {
+        if (e.auth) { showCloudState('auth'); showLogin(true); }
+        else if (e.code === 'PGRST205' || e.code === '42P01' || e.status === 404) { showCloudState('notable'); toast('クラウドの保存先（テーブル）がまだ作成されていません', 4000); }
+        else { console.warn('sync failed', e); showCloudState('offline'); }
+      } finally {
+        syncing = false;
+        if (syncAgain) { const o = syncAgain; syncAgain = null; setTimeout(() => sync(o), 200); }
+      }
+    }
+
+    // クラウド → 端末
+    async function pull() {
+      const list = await Cloud.rest(`${TABLE}?select=id,updated_at,deleted`);
+      const seen = new Set();
+      const need = [];
+      for (const r of list) {
+        seen.add(r.id);
+        if (r.id in tombs) continue;
+        const local = getWork(r.id);
+        const busy = dirty.has(r.id) || pending.has(r.id);
+        if (r.deleted) {
+          if (local && !busy) await removeLocal(local);   // 他の端末で削除された
+          continue;                                         // 編集中なら送信時に復活させる
+        }
+        if (!local) need.push(r.id);
+        else if (r.updated_at !== local._remoteVer && !busy) need.push(r.id);
+        // busy の場合は送信時にバージョン不一致を検出して競合処理する
+      }
+      for (let i = 0; i < need.length; i += 20) {
+        const rows = await Cloud.rest(`${TABLE}?select=id,data,updated_at&id=in.(${need.slice(i, i + 20).join(',')})`);
+        for (const row of rows) await applyRemote(row);
+      }
+      // まだクラウドにない作品は送る
+      for (const w of state.works) {
+        if (w._remoteVer != null && !seen.has(w.id)) w._remoteVer = null;
+        if (w._remoteVer == null && !pending.has(w.id)) markPending(w.id);
+      }
+      savePending();
+      if (need.length) refreshAfterRemote();
+    }
+    function toWork(row) {
+      const d = row.data || {};
+      return { title: '', synopsis: '', cover: '', created: Date.now(), ...d, chapters: Array.isArray(d.chapters) ? d.chapters : [], id: row.id, updated: d.updated || row.updated_at, _remoteVer: row.updated_at };
+    }
+    async function applyRemote(row) {
+      const w = toWork(row);
+      const i = state.works.findIndex((x) => x.id === w.id);
+      if (i >= 0) state.works[i] = w; else state.works.push(w);
+      await DB.put(serialize(w));
+    }
+    async function removeLocal(w) {
+      state.works = state.works.filter((x) => x.id !== w.id);
+      await DB.del(w.id).catch(() => {});
+      refreshAfterRemote();
+    }
+    function refreshAfterRemote() {
+      state.works.sort((a, b) => b.created - a.created);
+      // 本文を編集中ならカーソル位置を保つ
+      const editing = document.activeElement === bodyEl ? [bodyEl.selectionStart, bodyEl.selectionEnd, $('view').scrollTop] : null;
+      if (!current().work) state.prefs.view = state.works[0] ? { type: 'detail', workId: state.works[0].id } : null;
+      if (state.prefs.view && state.prefs.view.type === 'chapter' && !current().chapter) state.prefs.view = { type: 'detail', workId: state.prefs.view.workId };
+      render();
+      if (editing && bodyEl && document.body.contains(bodyEl)) {
+        bodyEl.focus(); bodyEl.setSelectionRange(editing[0], editing[1]); $('view').scrollTop = editing[2];
+      }
+    }
+
+    // 端末 → クラウド（バージョンが一致するときだけ上書き＝他端末の変更を消さない）
+    async function pushWork(w) {
+      const ver = Math.max(Date.now(), (w._remoteVer || 0) + 1);
+      const body = { data: remoteData(w), updated_at: ver, deleted: false };
+      if (w._remoteVer == null) {
+        try {
+          await Cloud.rest(TABLE, { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ id: w.id, ...body }) });
+        } catch (e) {
+          if (e.status === 409) return resolveConflict(w);
+          throw e;
+        }
+      } else {
+        const rows = await Cloud.rest(`${TABLE}?id=eq.${w.id}&updated_at=eq.${w._remoteVer}&select=id`, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body)
+        });
+        if (!rows || !rows.length) return resolveConflict(w);
+      }
+      w._remoteVer = ver;
+      await DB.put(serialize(w));
+    }
+    async function pushDelete(id, ver) {
+      if (ver == null) return; // クラウドに送る前に削除したもの
+      await Cloud.rest(`${TABLE}?id=eq.${id}&updated_at=eq.${ver}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ data: {}, deleted: true, updated_at: Math.max(Date.now(), ver + 1) })
+      });
+      // 他の端末で先に編集されていた場合は削除されず、次の同期で戻ってくる
+    }
+    // 同じ作品を別の端末でも変更していた場合：クラウドの版を採用し、この端末の版はコピーとして残す
+    async function resolveConflict(w) {
+      const rows = await Cloud.rest(`${TABLE}?select=id,data,updated_at,deleted&id=eq.${w.id}`);
+      const remote = rows && rows[0];
+      if (!remote) { w._remoteVer = null; return pushWork(w); }
+      if (remote.deleted) { w._remoteVer = remote.updated_at; return pushWork(w); } // 他端末で削除→この端末の版で復活
+      const copy = { ...serialize(w), id: uid(), title: (w.title || '無題の作品') + '（この端末の版）', created: Date.now(), _remoteVer: null };
+      state.works.push(copy);
+      await DB.put(copy);
+      await applyRemote(remote);
+      await pushWork(copy);
+      refreshAfterRemote();
+      toast('別の端末での変更と重なったため、この端末の版を「（この端末の版）」として残しました', 5000);
+    }
 
     // ===== データ操作 =====
     function newChapter(w, title) {
@@ -526,7 +765,7 @@
         return;
       }
       for (const w of state.works) {
-        const open = !!state.prefs.open[w.id];
+        const open = state.prefs.open[w.id] !== false; // 初期状態は展開
         const sorting = state.sorting === w.id;
         const t = workTotals(w);
         const workEl = h('div', { class: 'work' + (open ? ' open' : '') + (sorting ? ' sorting' : '') });
@@ -854,7 +1093,10 @@
       if (prompt('確認のため「削除」と入力してください') !== '削除') return;
       state.works = state.works.filter((w) => w !== work);
       dirty.delete(work.id);
+      tombs[work.id] = work._remoteVer == null ? null : work._remoteVer; saveTombs();
+      pending.delete(work.id); savePending();
       try { await DB.del(work.id); } catch {}
+      sync({ pull: false });
       navigate(null);
       toast('作品を削除しました');
     }
@@ -929,13 +1171,13 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on'); }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); dirty.size ? flush().then((ok) => ok && toast('保存しました')) : toast('保存済みです'); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush().then(() => sync()); }
     });
 
     // ===== バックアップ／復元 =====
     $('backupBtn').addEventListener('click', async () => {
       await flush();
-      const data = { app: 'novel-writer', version: 1, exported: new Date().toISOString(), works: state.works.map(serialize) };
+      const data = { app: 'novel-writer', version: 1, exported: new Date().toISOString(), works: state.works.map(remoteData) };
       const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       const d = new Date();
       const a = h('a', { href: URL.createObjectURL(blob), download: `のべるんバックアップ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json` });
@@ -953,7 +1195,8 @@
         for (const w of data.works) {
           if (!w.id || !Array.isArray(w.chapters)) continue;
           const i = state.works.findIndex((x) => x.id === w.id);
-          if (i >= 0) state.works[i] = w; else state.works.push(w);
+          const restored = { ...w, _remoteVer: i >= 0 ? state.works[i]._remoteVer : null };
+          if (i >= 0) state.works[i] = restored; else state.works.push(restored);
           dirty.add(w.id);
         }
         await flush();
@@ -963,7 +1206,36 @@
     });
 
     // ===== 起動 =====
+    // ===== アカウント =====
+    function renderAccount() {
+      $('accountEmail').textContent = (Cloud.session && Cloud.session.email) || '';
+      showCloudState();
+    }
+    async function clearLocalData() {
+      await DB.open();
+      await DB.clear().catch(() => {});
+      pending.clear(); savePending();
+      for (const k of Object.keys(tombs)) delete tombs[k];
+      saveTombs();
+      ls.del('novel:works');
+      state.works = [];
+    }
+    $('syncBtn').addEventListener('click', async () => { if (cloudState === 'notable') cloudState = 'idle'; await flush(); await sync(); if (cloudState === 'ok') toast('同期しました'); });
+    $('logoutBtn').addEventListener('click', async () => {
+      await flush(); await sync();
+      const unsent = pending.size + Object.keys(tombs).length;
+      const msg = unsent
+        ? `まだクラウドに送れていない作品が${unsent}件あります。\nログアウトすると、その変更は失われます。本当にログアウトしますか？`
+        : 'ログアウトしますか？\nこの端末に保存されている作品の控えは消去されます（クラウドには残ります）。';
+      if (!confirm(msg)) return;
+      Cloud.signOut();
+      await clearLocalData();
+      ls.del(OWNER_KEY);
+      location.reload();
+    });
+
     async function start() {
+      started = true;
       $('app').hidden = false;
       await DB.open();
       try { state.works = (await DB.all()) || []; } catch { state.works = []; }
@@ -980,11 +1252,11 @@
       if (!current().work) state.prefs.view = state.works[0] ? { type: 'detail', workId: state.works[0].id } : null;
       if (state.prefs.view && state.prefs.view.type === 'chapter' && !current().chapter) state.prefs.view = { type: 'detail', workId: state.prefs.view.workId };
       render();
-      setSaveState('保存済み');
-      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+      renderAccount();
+      sync();
     }
 
-    if (isAuthed()) start(); else showGate();
+    if (Cloud.session) start(); else showLogin(false);
   })();
   </script>
 </body>
