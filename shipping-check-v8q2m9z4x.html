@@ -76,8 +76,9 @@
     .app { display: flex; position: fixed; top: 0; left: 0; right: 0; height: 100%; }
     /* 横向き時のノッチ／ダイナミックアイランドを避ける */
     .sidebar { padding-left: env(safe-area-inset-left); }
-    .main { padding-right: env(safe-area-inset-right); }
-    body.no-sidebar .main, body.focus .main { padding-left: env(safe-area-inset-left); }
+    /* 横向きのノッチ側などの余白は、各段（上部バー・ツールバー・本文）の内側に取る（背景色を保つため） */
+    .main { --pl: 0px; --pr: env(safe-area-inset-right); }
+    body.no-sidebar .main, body.focus .main { --pl: env(safe-area-inset-left); }
 
     /* ---------- サイドバー（iPad のサイドバー風） ---------- */
     .sidebar { width: 310px; flex-shrink: 0; background: var(--side); border-right: 0.5px solid var(--line); display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(.2,.8,.2,1); padding-top: env(safe-area-inset-top); }
@@ -173,7 +174,7 @@
     /* 横向きのタッチ端末：画面の角・縁に近すぎないよう左の余白を確保 */
     @media (orientation: landscape) and (pointer: coarse) {
       .sidebar { padding-left: max(env(safe-area-inset-left), 12px); }
-      body.no-sidebar .main, body.focus .main { padding-left: max(env(safe-area-inset-left), 24px); }
+      body.no-sidebar .main, body.focus .main { --pl: max(env(safe-area-inset-left), 24px); }
     }
 
     .toolbar { display: flex; align-items: center; gap: 2px; padding: 4px 8px; background: var(--bar); border-bottom: 0.5px solid var(--line); overflow-x: auto; scrollbar-width: none; }
@@ -304,6 +305,16 @@
       .ch-title { font-size: 24px; }
       body.vertical .editor { padding: 16px 14px; }
     }
+    .main > .topbar { padding-left: calc(12px + var(--pl)); padding-right: calc(12px + var(--pr)); }
+    .main > .toolbar { padding-left: calc(8px + var(--pl)); padding-right: calc(8px + var(--pr)); }
+    .main > .view { padding-left: var(--pl); padding-right: var(--pr); }
+    @media (max-width: 760px) {
+      .main > .topbar { padding-left: calc(8px + var(--pl)); padding-right: calc(8px + var(--pr)); }
+      .main > .toolbar { padding-left: calc(12px + var(--pl)); padding-right: calc(12px + var(--pr)); }
+    }
+    /* 診断表示（「最終編集順」を3回タップで表示） */
+    #diag { position: fixed; left: 8px; bottom: 8px; z-index: 200; background: rgba(0,0,0,0.78); color: #fff; font: 11px/1.45 ui-monospace, Menlo, monospace; padding: 8px 10px; border-radius: 8px; white-space: pre; pointer-events: none; }
+    #safeProbe { position: fixed; top: 0; left: 0; width: 0; height: 0; visibility: hidden; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
   </style>
 </head>
 <body>
@@ -374,6 +385,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <div id="safeProbe"></div>
   <input type="file" id="coverFile" accept="image/*" hidden>
 
   <script>
@@ -1370,12 +1382,62 @@
       window.visualViewport.addEventListener('resize', fitViewport);
       window.visualViewport.addEventListener('scroll', fitViewport);
     }
+    // 回転後に iOS の表示領域が古い大きさのまま止まることがあるため、viewport 設定を一度書き換えて再計算させる
+    const vpMeta = document.querySelector('meta[name="viewport"]');
+    const vpOrig = vpMeta.getAttribute('content');
+    let vpTimer = null;
+    function refreshViewport() {
+      clearTimeout(vpTimer);
+      vpMeta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
+      vpTimer = setTimeout(() => { vpMeta.setAttribute('content', vpOrig); fitSoon(); }, 80);
+    }
+    let lastLand = window.matchMedia ? matchMedia('(orientation: landscape)').matches : false;
+    function onOrientation() {
+      [150, 700].forEach((t) => setTimeout(refreshViewport, t));
+      fitSoon();
+    }
+    if (window.matchMedia) {
+      const mq = matchMedia('(orientation: landscape)');
+      const onMq = () => { if (mq.matches !== lastLand) { lastLand = mq.matches; onOrientation(); } };
+      if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+    }
     window.addEventListener('resize', fitSoon);
-    window.addEventListener('orientationchange', fitSoon);
+    window.addEventListener('orientationchange', onOrientation);
     window.addEventListener('pageshow', fitSoon);
     document.addEventListener('focusout', () => setTimeout(() => { if (!isTyping()) fitSoon(); }, 50));
     window.addEventListener('scroll', () => { if (!isTyping()) window.scrollTo(0, 0); }, { passive: true });
     fitViewport();
+    // 診断表示：画面サイズ関係の値を表示する（不具合調査用）
+    let diagTimer = null, diagTaps = [];
+    function diagText() {
+      const vv = window.visualViewport || {};
+      const a = $('app').getBoundingClientRect();
+      const pr = getComputedStyle($('safeProbe'));
+      const r = (n) => Math.round(n * 10) / 10;
+      return [
+        'standalone ' + isIOSStandalone() + ' / land ' + (window.matchMedia && matchMedia('(orientation: landscape)').matches),
+        'screen     ' + screen.width + ' x ' + screen.height,
+        'inner      ' + innerWidth + ' x ' + innerHeight,
+        'client     ' + document.documentElement.clientWidth + ' x ' + document.documentElement.clientHeight,
+        'vv         ' + r(vv.width) + ' x ' + r(vv.height) + ' top ' + r(vv.offsetTop || 0),
+        'app        ' + r(a.width) + ' x ' + r(a.height) + ' @ ' + r(a.top) + ' (style ' + $('app').style.height + ')',
+        'safe t/r/b/l ' + [pr.paddingTop, pr.paddingRight, pr.paddingBottom, pr.paddingLeft].map((x) => parseInt(x, 10)).join('/'),
+        'scroll     ' + scrollX + ',' + scrollY + '  typing ' + isTyping()
+      ].join('\n');
+    }
+    function toggleDiag() {
+      let d = $('diag');
+      if (d) { d.remove(); clearInterval(diagTimer); return; }
+      d = h('div', { id: 'diag' });
+      document.body.append(d);
+      const upd = () => { d.textContent = diagText(); };
+      upd(); diagTimer = setInterval(upd, 500);
+    }
+    document.querySelector('.side-note').addEventListener('click', () => {
+      const now = Date.now();
+      diagTaps = diagTaps.filter((t) => now - t < 800).concat(now);
+      if (diagTaps.length >= 3) { diagTaps = []; toggleDiag(); }
+    });
     // 回転後しばらくしてから値が変わることがあるため、入力中以外は定期的に確認する
     setInterval(() => { if (!isTyping() && !document.hidden) fitViewport(); }, 1000);
     $('menuBtn').addEventListener('click', () => document.body.classList.add('drawer'));
