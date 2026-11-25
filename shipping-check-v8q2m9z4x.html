@@ -104,8 +104,9 @@
     .tree.editing .work-row.active .work-name { color: var(--ink-strong); }
     .tree.editing .ch-row.active .ch-no { color: var(--muted); }
     .tree.editing .ch-row::before { border-color: var(--line) !important; }
-    .tree.editing .mini, .tree.editing .twisty { visibility: hidden; }
-    .tree.editing .twisty { width: 6px; }
+    .tree.editing .mini, .tree.editing .twisty { display: none; }
+    .tree.editing .work-row { padding: 8px 12px; min-height: 0; }
+    .tree.editing .ch-row { padding: 6px 12px; min-height: 0; }
     .work.dragging { box-shadow: var(--shadow); border-radius: 12px; position: relative; z-index: 5; transform: scale(1.02); }
     .placeholder { color: var(--muted) !important; font-weight: 400 !important; }
     .side-tools { display: flex; align-items: center; gap: 12px; padding: 4px 16px 12px 20px; }
@@ -115,6 +116,9 @@
     .section-note.warn { color: var(--danger); }
     .section-note.warn:empty { display: none; }
     .group-btn:disabled { color: var(--muted2); cursor: default; }
+    .tree-rename { flex: 1; min-width: 0; height: 34px; align-self: center; border: none; border-radius: 8px; background: var(--fill); padding: 0 9px; font-size: 16px; line-height: 34px; outline: none; color: var(--ink-strong); }
+    .tree-rename.rn-work { font-weight: 600; font-size: 17px; }
+    .tree-rename:focus { box-shadow: 0 0 0 2px var(--accent); }
     .ch-rename { width: calc(100% - 34px); border: none; border-radius: 7px; background: var(--fill); padding: 5px 8px; font-size: 16px; outline: none; vertical-align: middle; }
     .modal-btns button:disabled { cursor: default; }
     .del-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 16px; line-height: 22px; margin-right: 10px; vertical-align: middle; font-weight: 700; }
@@ -579,7 +583,7 @@
         work.updated = Date.now();
         // 最終編集順のときは編集した作品をメニューの一番上へ
         const top = $('tree').querySelector('.work');
-        if (top && top.dataset.id !== work.id && hasTitle(work)) setTimeout(renderTree, 0);
+        if (!state.editing && top && top.dataset.id !== work.id && hasTitle(work)) setTimeout(renderTree, 0); // 編集中は並べ替えない
       }
       dirty.add(work.id);
       setSaveState('未保存…');
@@ -894,7 +898,7 @@
           onclick: () => { if (!state.editing) navigate({ type: 'detail', workId: w.id }); }
         },
           h('button', { class: 'twisty', 'aria-label': '開閉', onclick: (e) => { e.stopPropagation(); state.prefs.open[w.id] = !open; savePrefs(); renderTree(); } }, '▶'),
-          h('span', { class: 'work-name' + (hasTitle(w) ? '' : ' placeholder'), title: w.title }, hasTitle(w) ? w.title : '（作品名を入力）'),
+          state.editing ? renameInput(w, w, '作品名（必須）', 'work') : h('span', { class: 'work-name' + (hasTitle(w) ? '' : ' placeholder'), title: w.title }, hasTitle(w) ? w.title : '（作品名を入力）'),
           h('span', { class: 'mini' }, ratio(t.count, t.goal))
         ));
         if (t.goal && t.count >= t.goal) card.querySelector('.work-row .mini').classList.add('done');
@@ -907,7 +911,7 @@
             onclick: () => { if (!state.editing) navigate({ type: 'chapter', workId: w.id, chapterId: c.id }); }
           },
             h('span', { class: 'ch-no' }, i + 1),
-            h('span', { class: 'ch-name' + (hasTitle(c) ? '' : ' placeholder') }, hasTitle(c) ? c.title : '（サブタイトルを入力）'),
+            state.editing ? renameInput(w, c, 'サブタイトル（必須）', 'chapter') : h('span', { class: 'ch-name' + (hasTitle(c) ? '' : ' placeholder') }, hasTitle(c) ? c.title : '（サブタイトルを入力）'),
             h('span', { class: 'mini' + (done ? ' done' : '') }, ratio(chCount(c), c.goal || 0)),
             h('button', { class: 'handle', 'aria-label': 'ドラッグで並び替え', onpointerdown: (e) => startDrag(e, li, ul, (ids) => applyChapterOrder(w, ids)) }, '≡')
           );
@@ -917,6 +921,26 @@
         workEl.append(h('div', { class: 'work-actions' },
           hasTitle(w) ? h('button', { class: 'chip', onclick: () => addChapter(w) }, '＋ サブタイトル') : null));
         tree.append(workEl);
+      });
+    }
+    // メニューの編集中に作品名・サブタイトル名をその場で変更する（空欄にはできない）
+    function renameInput(work, target, placeholder, kind) {
+      return h('input', {
+        class: 'tree-rename rn-' + kind, type: 'text', value: target.title, placeholder, maxlength: '100',
+        onclick: (e) => e.stopPropagation(),
+        onpointerdown: (e) => e.stopPropagation(),
+        oninput: (e) => {
+          if (!e.target.value.trim()) return;
+          target.title = e.target.value;
+          touch(work);
+          renderCrumb();
+        },
+        onkeydown: (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.target.blur(); } },
+        onchange: (e) => {
+          if (!e.target.value.trim()) e.target.value = target.title; // 空にしたら元に戻す
+          if (current().type === 'detail') renderView(true);
+        },
+        onblur: (e) => { if (!e.target.value.trim()) e.target.value = target.title; }
       });
     }
     // ドラッグで並び替え（メニュー・作品詳細で共通）
@@ -1298,7 +1322,7 @@
       navigate({ type: 'detail', workId: w.id }); // 新規作品は作品詳細から始める
       setTimeout(() => { const t = document.querySelector('.work-title-input'); if (t) t.focus(); }, 0);
     });
-    $('editBtn').addEventListener('click', () => { state.editing = !state.editing; renderTree(); });
+    $('editBtn').addEventListener('click', () => { state.editing = !state.editing; renderTree(); if (!state.editing) { renderCrumb(); if (current().type === 'detail') renderView(true); } });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { document.body.classList.remove('focus', 'drawer'); $('focusBtn').classList.remove('on'); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush().then(() => sync()); }
