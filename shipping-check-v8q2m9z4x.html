@@ -1272,7 +1272,7 @@
           h('table', { class: 'goals' },
             h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, detailEditing ? '並び替え' : '目標'))),
             tbody,
-            h('tfoot', {}, h('tr', {}, h('td', {}, '合計'), totalCount, detailEditing ? h('td', {}) : totalGoal))),
+            h('tfoot', {}, h('tr', {}, h('td', {}), totalCount, detailEditing ? h('td', {}) : totalGoal))),
           detailEditing ? null : addBtn),
         h('div', { class: 'section-note' }, '作品の目標は、サブタイトルごとの目標の合計です。文字数はルビ記法・空白・改行を除いて数えます。'),
         work._savedTitle ? h('div', { class: 'group', style: 'margin-top:32px' },
