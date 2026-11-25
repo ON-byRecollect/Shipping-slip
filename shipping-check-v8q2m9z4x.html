@@ -115,6 +115,8 @@
     .section-note.warn { color: var(--danger); }
     .section-note.warn:empty { display: none; }
     .group-btn:disabled { color: var(--muted2); cursor: default; }
+    .ch-rename { width: calc(100% - 34px); border: none; border-radius: 7px; background: var(--fill); padding: 5px 8px; font-size: 16px; outline: none; vertical-align: middle; }
+    .modal-btns button:disabled { cursor: default; }
     .del-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 16px; line-height: 22px; margin-right: 10px; vertical-align: middle; font-weight: 700; }
     .row-tools { display: inline-flex; gap: 2px; align-items: center; }
     .detail tr.dragging td { background: var(--panel); }
@@ -825,10 +827,35 @@
     }
     function addChapter(w) {
       if (!hasTitle(w)) { toast('先に作品名を入力してください'); return; }
-      state.editing = false;
-      const c = newChapter(w);
-      navigate({ type: 'chapter', workId: w.id, chapterId: c.id });
-      setTimeout(() => { const t = document.querySelector('.ch-title'); t && t.focus(); }, 0);
+      openPrompt({ title: 'サブタイトルを追加', message: 'サブタイトルを入力してください', placeholder: '例：第一章 旅立ち', ok: '追加' }, (name) => {
+        state.editing = false;
+        const c = newChapter(w);
+        c.title = name;
+        touch(w);
+        navigate({ type: 'chapter', workId: w.id, chapterId: c.id });
+        setTimeout(() => { bodyEl && bodyEl.focus(); }, 0);
+      });
+    }
+    // 1行入力のダイアログ（iOS のアラート風）。空欄では確定できない
+    function openPrompt(opt, done) {
+      const input = h('input', { type: 'text', value: opt.value || '', placeholder: opt.placeholder || '', maxlength: '100' });
+      const okBtn = h('button', {}, opt.ok || 'OK');
+      const close = () => bg.remove();
+      const ok = () => { const v = input.value.trim(); if (!v) { input.focus(); return; } close(); done(v); };
+      const sync = () => { okBtn.disabled = !input.value.trim(); okBtn.style.opacity = okBtn.disabled ? 0.35 : 1; };
+      okBtn.addEventListener('click', ok);
+      input.addEventListener('input', sync);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); ok(); } else if (e.key === 'Escape') close(); });
+      const bg = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === bg) close(); } },
+        h('div', { class: 'modal', role: 'dialog', 'aria-label': opt.title },
+          h('div', { class: 'modal-body' },
+            h('h3', {}, opt.title),
+            opt.message ? h('p', { class: 'sub' }, opt.message) : null,
+            input),
+          h('div', { class: 'modal-btns' }, h('button', { onclick: close }, 'キャンセル'), okBtn)));
+      document.body.append(bg);
+      sync();
+      input.focus();
     }
 
     // ===== 作品の並び順 =====
@@ -989,15 +1016,7 @@
     // --- エディタ ---
     let bodyEl = null;
     function renderEditor(view, work, ch) {
-      const titleEl = h('input', {
-        class: 'ch-title', type: 'text', value: ch.title, placeholder: 'サブタイトル（必須）', maxlength: '100',
-        oninput: (e) => { ch.title = e.target.value; ch.updated = Date.now(); touch(work); renderCrumb(); updateTreeRow(work, ch); lockBody(); },
-        onkeydown: (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); bodyEl && bodyEl.focus(); } }
-      });
-      const goalEl = h('input', {
-        type: 'number', min: '0', step: '100', inputmode: 'numeric', placeholder: '0', value: ch.goal ? String(ch.goal) : '',
-        oninput: (e) => { ch.goal = Math.max(0, parseInt(e.target.value, 10) || 0); touch(work); renderCounts(); updateTreeRow(work, ch); }
-      });
+      // サブタイトルと目標文字数は作品詳細で設定する（本文画面には表示しない）
       bodyEl = h('textarea', {
         class: 'body-input', placeholder: '本文を書きましょう…\nルビ：｜漢字《かんじ》', spellcheck: false,
         oninput: () => onBodyInput(work, ch)
@@ -1007,12 +1026,11 @@
       const lockBody = () => {
         const locked = !hasTitle(ch);
         bodyEl.disabled = locked;
-        bodyEl.placeholder = locked ? 'サブタイトルを入力すると本文を書けます' : '本文を書きましょう…\nルビ：｜漢字《かんじ》';
+        bodyEl.placeholder = locked ? '作品詳細でサブタイトルを入力すると本文を書けます' : '本文を書きましょう…\nルビ：｜漢字《かんじ》';
       };
       lockBody();
       const preview = h('div', { class: 'preview' });
       const ed = h('div', { class: 'editor' },
-        h('div', { class: 'ch-head' }, titleEl, h('label', { class: 'goal-field' }, '目標', goalEl, '字')),
         state.prefs.preview ? preview : bodyEl
       );
       if (state.prefs.preview) renderPreview(preview, ch.body);
@@ -1156,7 +1174,14 @@
         const tr = h('tr', { class: detailEditing ? '' : 'link', 'data-id': c.id, onclick: () => { if (!detailEditing) navigate({ type: 'chapter', workId: work.id, chapterId: c.id }); } },
           h('td', {},
             detailEditing ? h('button', { class: 'del-btn', 'aria-label': '削除', onclick: (e) => { e.stopPropagation(); deleteChapter(work, c); } }, '−') : null,
-            h('span', { class: hasTitle(c) ? '' : 'placeholder' }, hasTitle(c) ? c.title : '（未入力）')),
+            detailEditing
+              ? h('input', {
+                  class: 'ch-rename', type: 'text', value: c.title, placeholder: 'サブタイトル（必須）', maxlength: '100',
+                  onclick: (e) => e.stopPropagation(),
+                  oninput: (e) => { if (e.target.value.trim()) { c.title = e.target.value; touch(work); updateTreeRow(work, c); } },
+                  onblur: (e) => { if (!e.target.value.trim()) e.target.value = c.title; }
+                })
+              : h('span', { class: hasTitle(c) ? '' : 'placeholder' }, hasTitle(c) ? c.title : '（未入力）')),
           h('td', { class: 'num' }, fmt(chCount(c))),
           h('td', {}, detailEditing
             ? h('span', { class: 'row-tools' },
@@ -1185,7 +1210,7 @@
         h('div', { class: 'section-label' }, 'あらすじ'),
         h('div', { class: 'group' }, syn),
         h('div', { class: 'section-label with-btn' }, h('span', {}, 'サブタイトルと目標文字数'),
-          work.chapters.length ? h('button', { class: 'text-btn', onclick: () => { detailEditing = !detailEditing; renderView(true); } }, detailEditing ? '完了' : '並び替え・削除') : null),
+          work.chapters.length ? h('button', { class: 'text-btn', onclick: () => { detailEditing = !detailEditing; renderView(true); } }, detailEditing ? '完了' : '編集') : null),
         h('div', { class: 'group' },
           h('table', { class: 'goals' },
             h('thead', {}, h('tr', {}, h('th', {}, 'サブタイトル'), h('th', {}, '文字数'), h('th', {}, detailEditing ? '並び替え' : '目標'))),
